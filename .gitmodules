@@ -1,0 +1,3 @@
+[submodule "projects/xp_02/packages/Multiprogramming"]
+	path = projects/xp_02/packages/Multiprogramming
+	url = https://github.com/peachnuts/Multiprogramming.git
