@@ -17,15 +17,14 @@
 %%     multiprogramming scheduler.
 
 flowchart TD
+    R3("Reduce QPU operation costs")
     R1("Minimize user latency")
     R2("Preserve operation quality: gates, measurements...")
-    R3("Reduce QPU operation costs")
     R4("Run secure circuits, on client and service side")
     R5("Deploy and maintain the solution easily")
 
     R1.A1("Maximize throughput")
     R1.A2("Fast compilation and scheduling")
-    R1.A3("Resilience under high load")
     R2.A1("Follow circuit compilation best practices")
     R2.A2("Minimize multiprog. impact on fidelity")
     R4.A1("Restrain attack vectors between circuits")
@@ -39,7 +38,7 @@ flowchart TD
     R1.A1.B2("Parallelize several circuits from one user: VQE...")
     R1.A2.B1("Acceptable complexity for compilation algorithms")
     R1.A2.B2("Acceptable complexity for scheduling algorithms")
-    R1.A3.B1("Scale solution horizontally")
+    R1.A2.B3("Offload compilation steps to user: offline compilation")
     R2.A1.B1("Align circuit measurement to occur at the same time")
     R2.A1.B2("Minimize qubits idling time")
     R2.A2.B1("Flexible multiprog.: disable if impact unacceptable")
@@ -55,12 +54,11 @@ flowchart TD
 
     R1    --> R1.A1
     R1    --> R1.A2
-    R1    --> R1.A3
     R1.A1 --> R1.A1.B1
     R1.A1 --> R1.A1.B2
     R1.A2 --> R1.A2.B1
     R1.A2 --> R1.A2.B2
-    R1.A3 --> R1.A3.B1
+    R1.A2 --> R1.A2.B3
 
     R2    --> R2.A1
     R2    --> R2.A2
