@@ -1,0 +1,88 @@
+%% Quelques directives :
+%% * Le graphe ne devrait jamais faire plus de 3 niveaux 
+%% * R représente les noeuds racine, A les nodes de mi-niveau et B les noeuds de
+%%   dernier niveau
+%% * Les noeuds R représente "pourquoi on a besoin de ça ?", les noeuds A
+%%   répondent à la question "Qu'est-ce qu'on devrait faire pour satisfaire
+%%   chaque besoin entreprise ?", et les noeuds B  représente un critère ou une
+%%   méthode technique pour compléter chaque condition
+%% * Dans la description des noeuds, on essaie le plus possible de commencer
+%%   chaque description par des verbes concrets, ça permet de rendre le graphe
+%%   plus concis (malgré sa grosse taille)
+%% * On admet que le graphe est non-exhaustif. Par exemple, on pourrait aussi
+%%   "maximiser le throughput" en réduisant la vitesse d'exécution des circuits,
+%%   mais rendre l'exécution des gates  plus rapides requierait plutôt de
+%%   nouveaux besoins de performance pour les puces de QPU, ce qui hors-contexte
+%%   pour notre analyse
+
+flowchart TD
+    R1("Minimiser la latence utilisateur")
+    R2("Maximiser la qualité des résultats")
+    R3("Réduire les coûts d'exploitation du QPU")
+    R4("Sécuriser les circuits, côté service et client")
+    R5("Déployer et maintenir facilement la solution")
+
+    R1.A1("Maximiser le throughput")
+    R1.A2("Compilation/scheduling rapide")
+    R1.A3("Résillience sous forte charge")
+    R2.A1("Respecter les bonnes pratiques de compilation")
+    R2.A2("Minimiser l'impact de la multiprog. sur la fidélité")
+    R4.A1("Limiter les vecteurs d'attaque entre circuits")
+    R4.A2("Identifier les attaquants, motifs et objectifs potentiels")
+    R5.A1("Solution compatible avec des technos connus")
+    R5.A2("Déployer avec reproductibilité")
+    R5.A3("Reloader facilement la solution en cas de crash")
+    R5.A4("Orchestrer le système en modules indépendants")
+
+    R1.A1.B1("Parraléliser des circuits de plusieurs utilisateurs")
+    R1.A1.B2("Parraléliser plusieurs cicruits d'un user: VQE...")
+    R1.A2.B1("Algos de compilation à faible complexité")
+    R1.A2.B2("Algos de scheduling à faible complexité")
+    R1.A3.B1("Scaler la solution horizontalement")
+    R2.A1.B1("Aligner la mesure des circuits au même moment")
+    R2.A1.B2("Minimiser les temps de passivité des qubits")
+    R2.A2.B1("Adapter la multiprog.: désactiver si trop d'impact")
+    R2.A2.B2("Equilibrer entre fidélité et throughput")
+    R2.A2.B3("Minimiser l'impact du crosstalk")
+    R4.A1.B1("Isoler l'exécution des circuits")
+    R5.A1.B1("Accepter des formats d'IR reconnus: OpenQASM")
+    R5.A1.B2("Accepter des compilateurs reconnus: Qiskit, Pulsar...")
+    R5.A2.B1("Versionner la solution sur serveur : Git...")
+    R5.A2.B2("Encapsuler la solution dans un format type Docker")
+    R5.A3.B1("Si stateless: système externe d'auto-reload")
+    R5.A3.B2("Si stateful: persistence facile de l'état logiciel")
+
+    R1    --> R1.A1
+    R1    --> R1.A2
+    R1    --> R1.A3
+    R1.A1 --> R1.A1.B1
+    R1.A1 --> R1.A1.B2
+    R1.A2 --> R1.A2.B1
+    R1.A2 --> R1.A2.B2
+    R1.A3 --> R1.A3.B1
+
+    R2    --> R2.A1
+    R2    --> R2.A2
+    R2.A1 --> R2.A1.B1
+    R2.A1 --> R2.A1.B2
+    R2.A2 --> R2.A2.B1
+    R2.A2 --> R2.A2.B2
+    R2.A2 --> R2.A2.B3
+
+    R3    --> R1.A1
+
+    R4    --> R4.A1
+    R4    --> R4.A2
+    R4.A1 --> R2.A2.B3
+    R4.A1 --> R4.A1.B1
+
+    R5    --> R5.A1
+    R5    --> R5.A2
+    R5    --> R5.A3
+    R5    --> R5.A4
+    R5.A1 --> R5.A1.B1
+    R5.A1 --> R5.A1.B2
+    R5.A2 --> R5.A2.B1
+    R5.A2 --> R5.A2.B2
+    R5.A3 --> R5.A3.B1
+    R5.A3 --> R5.A3.B2
