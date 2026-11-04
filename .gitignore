@@ -1,4 +1,10 @@
+# uv
+.python-version
+
 # Build
 build/
 .env
 .venv/
+
+# Python
+__pycache__/
