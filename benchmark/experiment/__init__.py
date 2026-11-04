@@ -1,18 +1,18 @@
 from collections.abc import Sequence
 
-from benchmark.preparation import Scheduler
+from benchmark.preparation import Batch, Scheduler
 
 
 class ExperimentResults:
     pass
 
 
-def run(scheduler: Scheduler, batch: Sequence[str]) -> ExperimentResults:
+def run(scheduler: Scheduler, batch: Batch) -> ExperimentResults:
     """Run an experiment based on the given scheduler and a batch of cases.
 
     Args:
         scheduler (Scheduler): a scheduler
-        batch (Collection[str]): a batch of circuits in OpenQASM format
+        batch (Batch): a batch of cases
 
     Returns:
         ExperimentResults: The results of the experiment.

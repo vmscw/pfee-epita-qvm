@@ -15,3 +15,6 @@ ultraq/calibration_data/
 __pycache__/
 .pytest_cache/
 .ruff_cache/
+
+# Scratch files
+*scratch*
