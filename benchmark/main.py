@@ -63,7 +63,7 @@ def run_benchmark(config: Config) -> BenchmarkResults:
         ok = measure(results)
 
         if not ok:
-            message = f"Metrics recording failed on batch {i}/{len(batches)}"
+            message = f"Metrics recording failed on batch {i}"
             warnings.warn(message)
 
     return get_measurements()

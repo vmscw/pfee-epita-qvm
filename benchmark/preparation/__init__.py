@@ -1,6 +1,9 @@
 from collections.abc import Sequence
 from typing import Type, Any
 
+from benchmark.preparation.batch import Batch
+from benchmark.preparation.cases import get_cases
+
 
 class Backend:
     pass
@@ -8,16 +11,6 @@ class Backend:
 
 class Scheduler:
     pass
-
-
-def get_cases() -> list[list[str]]:
-    """Return the benchmark cases.
-
-    Returns:
-        list[list[str]]: A list of batchs containing circuits in OpenQASM
-                         format.
-    """
-    return []
 
 
 def get_backend(name: str) -> Backend:
@@ -57,6 +50,7 @@ def get_scheduler(name: str, *, backend: Backend) -> Scheduler:
 
 
 __all__ = [
+    "Batch",
     "get_backend",
     "get_cases",
     "get_scheduler",
