@@ -1,62 +1,33 @@
-from argparse import ArgumentParser
-from dataclasses import dataclass
-import json
+import random
 import warnings
 
-from benchmark.preparation import get_backend, get_cases, get_scheduler
+from benchmark.config import invoke_config
 from benchmark.experiment import run
-from benchmark.measurement import BenchmarkResults, get_measurements, measure
+from benchmark.measurement import BenchmarkResults, measure, get_measurements
+from benchmark.preparation import get_cases, get_backend, get_scheduler
 
 
-@dataclass
-class Config:
-    scheduler: str
-    backend: str
+def setup_benchmark() -> None:
+    """Run all the processes to run before starting the benchmark.
 
-
-def define_parser() -> ArgumentParser:
-    """Define the CLI arguments parser.
-
-    Returns:
-        ArgumentParser: an argument parser
+    Such things include, for example, setting up randomization seeds.
     """
-    parser = ArgumentParser(prog="benchmark", usage="%(prog)s [options]")
+    CONFIG = invoke_config()
 
-    parser.add_argument("--scheduler")
-    parser.add_argument("--backend")
-
-    return parser
+    random.seed(CONFIG.seed)
 
 
-def load_config(parser: ArgumentParser) -> Config:
-    """Load the benchmark configuration.
-
-    Args:
-        parser (ArgumentParser): an argument parser
-
-    Returns:
-        Config: A benchmark configuration
-    """
-    args = parser.parse_args()
-
-    scheduler = args.scheduler
-    backend = args.backend
-
-    return Config(scheduler=scheduler, backend=backend)
-
-
-def run_benchmark(config: Config) -> BenchmarkResults:
+def run_benchmark() -> BenchmarkResults:
     """Run a benchmark and return its results.
-
-    Args:
-        config (Config): a benchmark configuration
 
     Returns:
         BenchmarkResults: The benchmark results
     """
+    CONFIG = invoke_config()
+
     batches = get_cases()
-    backend = get_backend(config.backend)
-    scheduler = get_scheduler(config.scheduler, backend=backend)
+    backend = get_backend(CONFIG.backend)
+    scheduler = get_scheduler(CONFIG.scheduler, backend=backend)
 
     for i, batch in enumerate(batches):
         results = run(scheduler, batch)
@@ -70,9 +41,9 @@ def run_benchmark(config: Config) -> BenchmarkResults:
 
 
 def main() -> None:
-    parser = define_parser()
-    config = load_config(parser)
-    results = run_benchmark(config)
+    setup_benchmark()
+
+    results = run_benchmark()
 
     print(results)
 

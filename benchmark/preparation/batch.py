@@ -17,7 +17,7 @@ class Batch(Sized):
         self.names: list[str] = list(iter(names))
         self.circuits: list[str] = list(iter(circuits))
 
-        assert len(self.names) != self.circuits, (
+        assert len(self.names) == len(self.circuits), (
             "names and circuits have an inconsistent length: names has a "
             f"length of {len(self.names)} while circuits has a length of "
             f"{len(self.circuits)}"
