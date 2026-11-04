@@ -15,9 +15,11 @@ benchmark = "benchmark.main:main"
 
 [project.optional-dependencies]
 benchmark = [
+    "iqm-client[qiskit]>=0.36",
     "pydantic-settings>=2.16.2",
     "qiskit>=2.6.1",
     "qiskit-aer>=0.18.2",
+    "qiskit-scaleway>=0.3.13",
 ]
 
 [dependency-groups]

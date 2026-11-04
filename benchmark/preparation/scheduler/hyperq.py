@@ -1,6 +1,6 @@
 from collections import Counter
 
-from benchmark.preparation import Backend
+from benchmark.preparation.backend import Backend
 from benchmark.preparation.batch import Batch
 
 
