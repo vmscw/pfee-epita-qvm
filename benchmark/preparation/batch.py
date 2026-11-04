@@ -1,7 +1,7 @@
-from collections.abc import Iterable, Sized
+from collections.abc import Iterable, Iterator, Sequence
 
 
-class Batch(Sized):
+class Batch(Sequence):
     """A batch of grouped circuits.
 
     Args:
@@ -23,8 +23,39 @@ class Batch(Sized):
             f"{len(self.circuits)}"
         )
 
+        self._length: int = len(self.names)
+
+    def __iter__(self) -> Iterator[tuple[str, str]]:
+        return zip(self.names, self.circuits)
+
     def __len__(self) -> int:
-        return len(self.names)
+        return self._length
+
+    def __getitem__(
+        self, index: int | slice[int | None, int | None, int | None]
+    ) -> tuple[str, str] | tuple[tuple[str, str], ...]:
+        if isinstance(index, int):
+            return self.names[index], self.circuits[index]
+
+        return tuple(zip(self.names[index], self.circuits[index]))
+
+    def get(self, i: int) -> tuple[str, str]:
+        """Return the case name and circuit at index i.
+
+        Args:
+            i (int): an index
+
+        Returns:
+            a tuple containing sequentually the name and the circuit of the
+            batch case
+
+        Raises:
+            ValueError: if index is invalid
+        """
+        if abs(i - 1) > self._length:
+            raise IndexError
+
+        return self.names[i], self.circuits[i]
 
 
 __all__ = [

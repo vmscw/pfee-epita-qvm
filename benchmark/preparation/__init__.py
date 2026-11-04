@@ -1,16 +1,24 @@
-from collections.abc import Sequence
-from typing import Type, Any
+from collections import Counter
+from typing import Protocol
 
 from benchmark.preparation.batch import Batch
 from benchmark.preparation.cases import get_cases
 
 
-class Backend:
-    pass
+class Backend(Protocol):
+    """Interface of an arbitrary quantum processing backend."""
+
+    def __init__(): ...
+
+    def run(self, circuit: str) -> Counter:
+        """Run the circuit and return its bitstring distribution.
+
+        Args:
+            circuit (str): a circuit in OpenQASM format
+        """
 
 
-class Scheduler:
-    pass
+from benchmark.preparation.scheduler import Scheduler, get_scheduler
 
 
 def get_backend(name: str) -> Backend:
@@ -32,25 +40,10 @@ def get_backend(name: str) -> Backend:
     raise NotImplementedError
 
 
-def get_scheduler(name: str, *, backend: Backend) -> Scheduler:
-    """Return a scheduler to benchmark based on its name.
-
-    Args:
-        name (str): a name
-        backend (Backend): a backend to provide to the scheduler
-
-    Returns:
-        Scheduler: The corresponding scheduler.
-
-    Raises:
-        ValueError: if the specified name doesn't correspond to any actual
-                    scheduler
-    """
-    raise NotImplementedError
-
-
 __all__ = [
+    "Backend",
     "Batch",
+    "Scheduler",
     "get_backend",
     "get_cases",
     "get_scheduler",
