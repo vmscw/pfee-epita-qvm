@@ -56,8 +56,9 @@ def _preprocess(cases: Iterable[Path]) -> Generator[Batch, None, None]:
     iterator = iter(cases)
 
     while slice := itertools.islice(iterator, random.randint(2, 7)):
-        names = (case.stem for case in slice)
-        circuits = (Path.read_text(case / f"{case.stem}.qasm") for case in slice)
+        batch_files = tuple(slice)
+        names = (case.stem for case in batch_files)
+        circuits = (Path.read_text(case / f"{case.stem}.qasm") for case in batch_files)
 
         batch = Batch(names, circuits)
 
