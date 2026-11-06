@@ -13,8 +13,18 @@ class Config(BaseSettings):
     scheduler: str
     """Scheduler to measure for the benchmark."""
 
+    num_shots: int = 1024
+    """Number of shots run for each circuit."""
     seed: int = 42
     """Seed to use for the benchmark."""
+
+    debug_circuit_max_size: int = 12
+    """When using a simulator, the max size accepted for input circuits.
+
+    Any circuit bigger than the specified size will be ignored.
+    """
+    debug_noise_on: bool = False
+    """When using a simulator, whether to add noise to the backend."""
 
 
 @functools.lru_cache()

@@ -15,6 +15,7 @@ class Backend(Protocol):
         """
 
 
+from benchmark.preparation.backend.qiskit_aer import QiskitAer
 from benchmark.preparation.backend.iqm_garnet_20q import IQMGarnet20q
 from benchmark.preparation.backend.iqm_garnet_20q_emulation import (
     IQMGarnet20qEmulation,
@@ -26,9 +27,11 @@ BACKEND_NAMES: dict[str, Type[Backend]] = {
     "IQMGarnet20q": IQMGarnet20q,
     "IQMGarnet20qEmulation": IQMGarnet20qEmulation,
     "IQMEmerald54q": IQMEmerald54q,
+    "QiskitAer": QiskitAer,
     "iqm_garnet_20q": IQMGarnet20q,
     "iqm_garnet_20q_emulation": IQMGarnet20qEmulation,
     "iqm_emerald_54q": IQMEmerald54q,
+    "qiskit_aer": QiskitAer,
 }
 
 
