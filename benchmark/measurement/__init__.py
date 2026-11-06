@@ -17,6 +17,10 @@ def measure(results: ExperimentResults) -> bool:
         bool: True if all metrics could have been extracted from results.
               False otherwise.
     """
+    # we need
+    #   - the fidelity
+    #   - the throughput
+
     raise NotImplementedError
 
 
