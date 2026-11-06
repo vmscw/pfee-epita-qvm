@@ -1,0 +1,33 @@
+sequenceDiagram
+    actor User
+    participant main@{ type : "control" }
+    participant Preparation@{ type : "entity" }
+    participant Experiment@{ type : "entity" }
+    participant Measurement@{ type : "entity" }
+
+    User->>+main: start(scheduler_name, backend_name)
+
+    %% Preparation
+    main->>+Preparation: batches := getCases()
+    Preparation->>-main: OpenQASM[][]
+    main->>+Preparation: backend := getBackend(backend_name)
+    Preparation->>-main: Backend
+    main->>+Preparation: scheduler_type := getScheduler(scheduler_name)
+    Preparation->>-main: Type[Scheduler]
+    main->>main: scheduler := scheduler_type(backend)
+
+    loop for batch in batches
+        %% Experiment
+        main->>+Experiment: results := run(scheduler, batch)
+        Experiment->>-main: CircuitResult[]
+
+        %% Measurement (during Experiment)
+        main->>+Measurement: measure(results)
+        Measurement->>-main: ok
+    end
+
+    # End
+    main->>+Measurement: measurements := get_measurements(scheduler, cases)
+    Measurement->>-main: Table
+
+    main->>-User: measurements
