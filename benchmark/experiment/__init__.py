@@ -1,10 +1,13 @@
+from collections import Counter
 from collections.abc import Sequence
 
 from benchmark.preparation import Batch, Scheduler
 
 
 class ExperimentResults:
-    pass
+    def __init__(self, counts: dict[str, Counter]):
+        self.names = list(counts.keys())
+        self.counts = counts
 
 
 def run(scheduler: Scheduler, batch: Batch) -> ExperimentResults:
@@ -17,7 +20,8 @@ def run(scheduler: Scheduler, batch: Batch) -> ExperimentResults:
     Returns:
         ExperimentResults: The results of the experiment.
     """
-    raise NotImplementedError
+    counts = scheduler.run(batch)
+    return ExperimentResults(counts)
 
 
 __all__ = ["ExperimentResults", "run"]
