@@ -1,0 +1,20 @@
+[project]
+name = "ultraq"
+version = "0.1.0"
+description = "Multiprogramming of quantum VMs (qVMs) on one chip, inspired by HyperQ (OSDI'25)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "python-dotenv>=1.0",
+    "qiskit>=2.1",
+    "qiskit-aer>=0.17",
+    "rustworkx>=0.15",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
+[tool.uv]
+package = false
