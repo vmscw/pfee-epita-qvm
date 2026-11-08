@@ -1,13 +1,13 @@
 from typing import TypedDict
 
-from benchmark.experiment import ExperimentResults
+from benchmark.experiment import Experiment
 
 
 class BenchmarkResults(TypedDict):
     """The results of the benchmark."""
 
 
-def measure(results: ExperimentResults) -> bool:
+def measure(results: Experiment) -> bool:
     """Add the run results to the benchmark results.
 
     Args:
