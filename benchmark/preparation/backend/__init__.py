@@ -1,26 +1,33 @@
 from collections import Counter
 from typing import Protocol, Type
 
+from qiskit.providers import JobV1
+
 
 class Backend(Protocol):
     """Interface of an arbitrary quantum processing backend."""
 
     def __init__(self): ...
 
-    def run(self, circuit: str) -> Counter:
-        """Run the circuit and return its bitstring distribution.
+    def run(self, circuit: str) -> JobV1 | None:
+        """Run the circuit and return a job id.
 
         Args:
             circuit (str): a circuit in OpenQASM format
+
+        Returns:
+            JobV1 | None: The job running the circuit if it is run. None
+                          otherwise.
         """
 
 
-from benchmark.preparation.backend.qiskit_aer import QiskitAer
 from benchmark.preparation.backend.iqm_garnet_20q import IQMGarnet20q
 from benchmark.preparation.backend.iqm_garnet_20q_emulation import (
     IQMGarnet20qEmulation,
 )
 from benchmark.preparation.backend.iqm_emerald_54q import IQMEmerald54q
+from benchmark.preparation.backend.scaleway_base import ScalewayProvided
+from benchmark.preparation.backend.qiskit_aer import QiskitAer
 
 
 BACKEND_NAMES: dict[str, Type[Backend]] = {
@@ -64,5 +71,7 @@ __all__ = [
     "IQMGarnet20q",
     "IQMGarnet20qEmulation",
     "IQMEmerald54q",
+    "QiskitAer",
+    "ScalewayProvided",
     "get_backend",
 ]

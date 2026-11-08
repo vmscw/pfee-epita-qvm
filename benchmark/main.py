@@ -29,13 +29,9 @@ def run_benchmark() -> BenchmarkResults:
     backend = get_backend(CONFIG.backend)
     scheduler = get_scheduler(CONFIG.scheduler, backend=backend)
 
-    for i, batch in enumerate(batches):
-        results = run(scheduler, batch)
-        ok = measure(results)
-
-        if not ok:
-            message = f"Metrics recording failed on batch {i}"
-            warnings.warn(message)
+    for batch in batches:
+        for experiment in run(scheduler, batch):
+            measure(experiment)
 
     return get_measurements()
 

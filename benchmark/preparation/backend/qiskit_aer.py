@@ -1,14 +1,13 @@
-from benchmark.utils import qasm2_to_qiskit
-from collections import Counter
 import warnings
 
 import qiskit
 import qiskit.qasm2
 from qiskit.providers.fake_provider import GenericBackendV2
 from qiskit.transpiler import CouplingMap
-from qiskit_aer import AerSimulator
+from qiskit_aer import AerJob, AerSimulator
 
 from benchmark.config import invoke_config
+from benchmark.utils import qasm2_to_qiskit
 
 
 def _define_backend(noise: bool = False) -> GenericBackendV2:
@@ -51,22 +50,22 @@ class QiskitAer:
         self._architecture = _define_backend(config.debug_noise_on)
         self._engine = AerSimulator.from_backend(self._architecture)
 
-    def run(self, circuit: str) -> Counter:
+    def run(self, circuit: str) -> AerJob | None:
         qiskit_circuit = qasm2_to_qiskit(circuit)
 
         if qiskit_circuit is None:
-            return Counter()
+            return None
 
         if qiskit_circuit.num_qubits > self._max_size:
             warnings.warn("Circuit contains more than 10 qubits. Ignoring it.")
-            return Counter()
+            return None
 
         transpiled_circuit = qiskit.transpile(
             qiskit_circuit,
             backend=self._architecture,
         )
-        job = self._engine.run(transpiled_circuit, shots=self._num_shots)
-        return job.result().get_counts()
+
+        return self._engine.run(transpiled_circuit, shots=self._num_shots)
 
 
 __all__ = ["QiskitAer"]

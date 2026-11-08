@@ -4,6 +4,10 @@ from benchmark.preparation.backend import Backend
 from benchmark.preparation.batch import Batch
 
 
+class HyperQJob:
+    """Implementation of a job generated from a HyperQ scheduler."""
+
+
 class HyperQ:
     """QVM allocator as originally conceived by Tao and al.
 
@@ -17,8 +21,8 @@ class HyperQ:
     def __init__(self, backend: Backend):
         self.backend: Backend = backend
 
-    def run(self, batch: Batch) -> dict[str, Counter]:
-        ...
+    def run(self, batch: Batch) -> list[HyperQJob]:
+        raise NotImplementedError
 
 
-__all__ = ["HyperQ"]
+__all__ = ["HyperQ", "HyperQJob"]
