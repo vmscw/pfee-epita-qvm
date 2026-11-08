@@ -1,16 +1,17 @@
 from collections import Counter
-from collections.abc import Collection, Sequence
+from collections.abc import Sequence
 
 from qiskit.providers import JobV1
 
 from benchmark.preparation.backend import Backend
 from benchmark.preparation.batch import Batch
+from benchmark.utils import qasm2_to_qiskit
 
 
 class SequentialJob:
     """Implementation of a job generated from a sequential "scheduler"."""
 
-    def __init__(self, job: JobV1, circuit: str):
+    def __init__(self, job: JobV1, circuit: str, num_qubits: int):
         self.id: str
         self.circuits: Sequence[str]
         self.qvms: Sequence[Sequence[int]]
@@ -18,7 +19,7 @@ class SequentialJob:
         self._job = job
         self.id = job.job_id()
         self.circuits = [circuit]
-        self.qvms = []
+        self.qvms = [list(range(num_qubits))]
 
     def result(self) -> dict[str, Counter]:
         result = self._job.result()
@@ -46,7 +47,12 @@ class Sequential:
             if (job := self.backend.run(circuit)) is None:
                 continue
 
-            jobs.append(SequentialJob(job, circuit=name))
+            # temporary hack
+            circuit = qasm2_to_qiskit(circuit)
+            assert circuit is not None
+            num_qubits = circuit.num_qubits
+
+            jobs.append(SequentialJob(job, circuit=name, num_qubits=num_qubits))
 
         return jobs
 

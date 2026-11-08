@@ -16,5 +16,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
+# Artefacts
+artefacts/
+
 # Scratch files
 *scratch*
