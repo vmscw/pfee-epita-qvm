@@ -1,4 +1,7 @@
+from typing import Self
+from pydantic import model_validator
 import functools
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -7,6 +10,14 @@ class Config(BaseSettings):
     """Global configuration to use as reference for the benchmark."""
 
     model_config = SettingsConfigDict(cli_parse_args=True, frozen=True)
+
+    benchmark_name: str | None = None
+    """Name to apply to the benchmark.
+
+    Defaults to f"{scheduler}_{backend}_{timestamp}".
+    """
+    artefacts_dir: Path = Path(".") / "artefacts"
+    """Folder at which to store outputs."""
 
     backend: str
     """Backend to use for the benchmark."""

@@ -9,5 +9,8 @@ build/
 # Python
 __pycache__/
 
+# Artefacts
+artefacts/
+
 # Scratch files
 *scratch*
