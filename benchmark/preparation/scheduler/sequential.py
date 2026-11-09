@@ -38,6 +38,7 @@ class Sequential:
     """
 
     def __init__(self, backend: Backend):
+        self.name = "sequential"
         self.backend: Backend = backend
 
     def run(self, batch: Batch) -> list[SequentialJob]:

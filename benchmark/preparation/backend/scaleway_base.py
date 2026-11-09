@@ -21,6 +21,9 @@ class ScalewayProvided(ABC):
         self._provider = ScalewayProvider()
         self._engine: BaseBackend = self._provider.get_backend(backend)
 
+        self.name = "scaleway_provided"
+        self.num_qubits = self._engine.num_qubits
+
     def run(self, circuit: str) -> BaseJob | None:
         qiskit_circuit = qasm2_to_qiskit(circuit)
 

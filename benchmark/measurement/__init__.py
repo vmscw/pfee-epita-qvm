@@ -3,6 +3,7 @@ import json
 from typing import Any
 
 from benchmark.config import invoke_config
+from benchmark.preparation import Backend, Scheduler
 from benchmark.experiment import Experiment
 
 
@@ -30,13 +31,34 @@ def _load_record(target: str, record: dict[str, Any]) -> None:
         raise KeyError(target)
 
 
+def _save_value(value: Any, at: Path) -> Path:
+    """Save a plain Python value at the specified path.
+
+    Params:
+        value (Any): a value
+        at (Path): a folder path
+
+    Returns:
+        Path: at
+    """
+    at.parent.mkdir(parents=True, exist_ok=True)
+    at.write_text(str(value))
+    return at
+
+
 def _save_database(database: BenchmarkDatabase, at: Path) -> Path:
-    actual_path = at.with_suffix(".jsonl")
+    """Save the benchmark results database at the specified path.
 
-    actual_path.parent.mkdir(parents=True, exist_ok=True)
-    actual_path.write_text(json.dumps(database))
+    Params:
+        database (BenchmarkDatabase): a database
+        at (Path): a folder path
 
-    return Path(actual_path)
+    Returns:
+        Path: The path at which the database is stored
+    """
+    formatted_database = json.dumps(database)
+    actual_at = at.with_suffix(".jsonl")
+    return _save_value(formatted_database, at=actual_at)
 
 
 def measure(experiment: Experiment) -> bool:
@@ -83,6 +105,24 @@ def measure(experiment: Experiment) -> bool:
     return True
 
 
+def save_metadata(name: str, scheduler: Scheduler, backend: Backend) -> Path:
+    config = invoke_config()
+
+    metadata_output_path = config.artefacts_dir / name / "metadata.json"
+
+    metadata = {
+        "benchmark_name": name,
+        "backend": backend.name,
+        "num_qubits": backend.num_qubits,
+        "num_shots": config.num_shots,
+        "scheduler": scheduler.name,
+        "seed": config.seed,
+    }
+    metadata_formatted = json.dumps(metadata)
+
+    return _save_value(metadata_formatted, at=metadata_output_path)
+
+
 def save_measurements(name: str) -> tuple[Path, Path]:
     config = invoke_config()
 
@@ -102,4 +142,5 @@ __all__ = [
     "BenchmarkDatabase",
     "measure",
     "save_measurements",
+    "save_metadata",
 ]

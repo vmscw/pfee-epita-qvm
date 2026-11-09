@@ -50,6 +50,9 @@ class QiskitAer:
         self._architecture = _define_backend(config.debug_noise_on)
         self._engine = AerSimulator.from_backend(self._architecture)
 
+        self.name = "qiskit_aer"
+        self.num_qubits = 25
+
     def run(self, circuit: str) -> AerJob | None:
         qiskit_circuit = qasm2_to_qiskit(circuit)
 

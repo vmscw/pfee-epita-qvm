@@ -6,6 +6,10 @@ from qiskit.providers import JobV1
 
 class Backend(Protocol):
     """Interface of an arbitrary quantum processing backend."""
+    name: str
+    """Name of the backend."""
+    num_qubits: int
+    """The total number of qubits of the backend."""
 
     def __init__(self): ...
 
