@@ -42,6 +42,8 @@ class Scheduler(Protocol):
     Args:
         backend (Backend): a quantum backend to use to process the circuits
     """
+    name: str
+    """Name of the scheduler."""
 
     def __init__(self, backend: Backend): ...
 

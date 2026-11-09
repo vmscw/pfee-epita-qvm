@@ -10,6 +10,7 @@ class IQMGarnet20qEmulation(ScalewayProvided):
 
     def __init__(self):
         super().__init__(backend="QPU-GARNET-20PQ-MOCK")
+        self.name = "iqm-garnet-20q-mock"
 
 
 __all__ = ["IQMGarnet20qEmulation"]

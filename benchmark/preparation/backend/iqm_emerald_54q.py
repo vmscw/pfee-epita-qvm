@@ -6,6 +6,7 @@ class IQMEmerald54q(ScalewayProvided):
 
     def __init__(self):
         super().__init__(backend="QPU-EMERALD-54PQ")
+        self.name = "iqm-emerald-54q"
 
 
 __all__ = ["IQMEmerald54q"]

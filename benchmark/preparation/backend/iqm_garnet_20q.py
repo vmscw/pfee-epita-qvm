@@ -6,6 +6,7 @@ class IQMGarnet20q(ScalewayProvided):
 
     def __init__(self):
         super().__init__(backend="QPU-GARNET-20PQ")
+        self.name = "iqm-garnet-20q"
 
 
 __all__ = ["IQMGarnet20q"]

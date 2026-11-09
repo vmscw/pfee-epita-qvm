@@ -5,7 +5,7 @@ import warnings
 
 from benchmark.config import invoke_config
 from benchmark.experiment import run
-from benchmark.measurement import measure, save_measurements
+from benchmark.measurement import measure, save_measurements, save_metadata
 from benchmark.preparation import get_cases, get_backend, get_scheduler
 
 
@@ -19,7 +19,7 @@ def setup_benchmark() -> None:
     random.seed(CONFIG.seed)
 
 
-def run_benchmark() -> tuple[PathLike, PathLike]:
+def run_benchmark() -> tuple[PathLike, PathLike, PathLike]:
     """Run a benchmark and return its results.
 
     Returns:
@@ -42,7 +42,7 @@ def run_benchmark() -> tuple[PathLike, PathLike]:
         for experiment in run(scheduler, batch):
             measure(experiment)
 
-    return save_measurements(name)
+    return save_metadata(name, scheduler, backend), *save_measurements(name)
 
 
 def main() -> None:
