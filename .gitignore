@@ -1,4 +1,16 @@
+# uv
+.python-version
+
 # Build
 build/
 .env
 .venv/
+
+# Python
+__pycache__/
+
+# Artefacts
+artefacts/
+
+# Scratch files
+*scratch*
