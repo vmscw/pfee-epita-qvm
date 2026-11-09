@@ -1,4 +1,4 @@
-from .main import main
+from benchmark.analysis import main as analysis
+from benchmark.main import main
 
-
-__all__ = ["main"]
+__all__ = ["analysis", "main"]

@@ -12,6 +12,7 @@ dependencies = []
 [project.scripts]
 pfee-epita-qvm = "pfee_epita_qvm:main"
 benchmark = "benchmark.main:main"
+metrics = "benchmark.analysis:main"
 
 [project.optional-dependencies]
 benchmark = [
@@ -19,6 +20,7 @@ benchmark = [
     "qiskit>=2.6.1",
     "qiskit-aer>=0.18.2",
     "qiskit-scaleway>=0.3.13",
+    "shtab>=1.13.0",
 ]
 
 [dependency-groups]
