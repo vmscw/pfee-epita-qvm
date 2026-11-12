@@ -39,7 +39,7 @@ def run_benchmark() -> tuple[PathLike, PathLike, PathLike]:
     scheduler = get_scheduler(CONFIG.scheduler, backend=backend)
 
     for batch in batches:
-        for experiment in run(scheduler, batch):
+        for experiment in run(scheduler, backend, batch):
             measure(experiment)
 
     return save_metadata(name, scheduler, backend), *save_measurements(name)

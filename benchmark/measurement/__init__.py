@@ -64,6 +64,19 @@ def _save_database(database: BenchmarkDatabase, at: Path) -> Path:
 def measure(experiment: Experiment) -> bool:
     """Add the results of an experiment to the benchmark results.
 
+    During measurements, the following metrics are computed.
+
+    For each job:
+        duration (float): the total processing time of the job in the backend
+        throughput (float): the utilization rate of the backend qubits by the
+                            job
+
+    For each circuit:
+        counts (Counter): the total occurences of each state measured at the
+                          end of the circuit. this is necessary to compute the
+                          fidelity using a reference run (from a noiseless
+                          simulation) afterwards
+
     Args:
         experiment (Experiment): an experiment
 
@@ -84,21 +97,31 @@ def measure(experiment: Experiment) -> bool:
     # See-Also:
     #   https://quantum.cloud.ibm.com/docs/en/api/qiskit-ibm-runtime/runtime-job-v2#usage
     duration = 0.0
+
+    job_id = experiment.job.id
+    n_qubits = experiment.n_qubits
+    total_qubits = experiment.backend.num_qubits
     results = experiment.job.result()
 
     for name, counts in results.items():
+        # NOTE: almost every metric can be computed from the experiment alone.
+        #       this is not the case for fidelity: it can be only computed
+        #       using a reference, which a run of the circuit in a noiseless
+        #       environment
         circuit_record = {
             "name": name,
             "counts": counts,
             "duration": duration,
+            "job_id": job_id,
         }
         _load_record("circuits", circuit_record)
 
     runtime_record = {
-        "job_id": experiment.job.id,
-        "n_qubits": experiment.n_qubits,
+        "job_id": job_id,
+        "n_qubits": n_qubits,
         "n_circuits": experiment.n_circuits,
         "duration": duration,
+        "throughput": round(n_qubits / total_qubits, 6),
     }
     _load_record("runtime", runtime_record)
 
@@ -126,8 +149,8 @@ def save_metadata(name: str, scheduler: Scheduler, backend: Backend) -> Path:
 def save_measurements(name: str) -> tuple[Path, Path]:
     config = invoke_config()
 
-    circuits_output_path = config.artefacts_dir / name / "circuits_raw"
-    runtime_output_path = config.artefacts_dir / name / "runtime_raw"
+    circuits_output_path = config.artefacts_dir / name / "circuits"
+    runtime_output_path = config.artefacts_dir / name / "runtime"
 
     assert circuits_output_path is not None
     assert runtime_output_path is not None
