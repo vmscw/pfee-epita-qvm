@@ -15,6 +15,7 @@ benchmark = "benchmark.main:main"
 
 [project.optional-dependencies]
 benchmark = [
+    "polars>=2.1.0",
     "pydantic-settings>=2.16.2",
     "qiskit>=2.6.1",
     "qiskit-aer>=0.18.2",

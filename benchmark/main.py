@@ -1,3 +1,4 @@
+from pathlib import Path
 from datetime import datetime
 from os import PathLike
 import random
@@ -19,11 +20,11 @@ def setup_benchmark() -> None:
     random.seed(CONFIG.seed)
 
 
-def run_benchmark() -> tuple[PathLike, PathLike, PathLike]:
+def run_benchmark() -> Path:
     """Run a benchmark and return its results.
 
     Returns:
-        BenchmarkResults: The benchmark results
+        Path: the root folder of the benchmark artefacts
     """
     CONFIG = invoke_config()
 
@@ -42,15 +43,18 @@ def run_benchmark() -> tuple[PathLike, PathLike, PathLike]:
         for experiment in run(scheduler, backend, batch):
             measure(experiment)
 
-    return save_metadata(name, scheduler, backend), *save_measurements(name)
+    output = save_metadata(name, scheduler, backend)
+    save_measurements(name)
+
+    return output.parent
 
 
 def main() -> None:
     setup_benchmark()
 
-    results = run_benchmark()
+    output_folder = run_benchmark()
 
-    print(results)
+    print("Artefacts have been stored at:", output_folder.absolute())
 
 
 __all__ = [
