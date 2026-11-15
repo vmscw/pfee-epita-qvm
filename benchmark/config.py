@@ -41,6 +41,11 @@ class AuthConfig(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", frozen=True)
 
+    IQM_SERVER_URL: str = ""
+    """IQM server URL. Only accessed when using an IQM backend."""
+    IQM_TOKEN: str = ""
+    """IQM access token. Only accessed when using an IQM backend."""
+
     SCW_PROJECT_ID: str = ""
     """Scaleway project ID. Only accessed when using a Scaleway backend."""
     SCW_SECRET_KEY: str = ""

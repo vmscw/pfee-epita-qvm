@@ -15,11 +15,12 @@ benchmark = "benchmark.main:main"
 
 [project.optional-dependencies]
 benchmark = [
+    "iqm-client[qiskit]>=37.0",
     "polars>=2.1.0",
     "pydantic-settings>=2.16.2",
     "pyqir>=0.12.8",  # requested by qiskit-scaleway
-    "qiskit>=2.6.1",
-    "qiskit-aer>=0.18.2",
+    "qiskit[qiskit]>=2",
+    "qiskit-aer[qiskit]>=0.17",
     "qiskit-scaleway>=0.3.13",
 ]
 
