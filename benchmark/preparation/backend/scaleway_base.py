@@ -3,7 +3,7 @@ from abc import ABC
 from qiskit_scaleway import ScalewayProvider
 from qiskit_scaleway.backends import BaseBackend, BaseJob
 
-from benchmark.config import invoke_config
+from benchmark.config import invoke_config, invoke_auth_config
 from benchmark.utils import qasm2_to_qiskit
 
 
@@ -16,9 +16,13 @@ class ScalewayProvided(ABC):
 
     def __init__(self, backend: str):
         config = invoke_config()
+        auth_config = invoke_auth_config()
 
         self._num_shots = config.num_shots
-        self._provider = ScalewayProvider()
+        self._provider = ScalewayProvider(
+            project_id=auth_config.SCW_PROJECT_ID,
+            secret_key=auth_config.SCW_SECRET_KEY,
+        )
         self._engine: BaseBackend = self._provider.get_backend(backend)
 
         self.name = "scaleway_provided"

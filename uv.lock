@@ -286,6 +286,7 @@ source = { editable = "." }
 benchmark = [
     { name = "polars" },
     { name = "pydantic-settings" },
+    { name = "pyqir" },
     { name = "qiskit" },
     { name = "qiskit-aer" },
     { name = "qiskit-scaleway" },
@@ -302,6 +303,7 @@ dev = [
 requires-dist = [
     { name = "polars", marker = "extra == 'benchmark'", specifier = ">=2.1.0" },
     { name = "pydantic-settings", marker = "extra == 'benchmark'", specifier = ">=2.16.2" },
+    { name = "pyqir", marker = "extra == 'benchmark'", specifier = ">=0.12.8" },
     { name = "qiskit", marker = "extra == 'benchmark'", specifier = ">=2.6.1" },
     { name = "qiskit-aer", marker = "extra == 'benchmark'", specifier = ">=0.18.2" },
     { name = "qiskit-scaleway", marker = "extra == 'benchmark'", specifier = ">=0.3.13" },
@@ -490,6 +492,21 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/92/0f/aeaa2161ca91b6d63020d8fa900820ac39c2804b76ba9a453aeab92c6d3f/pyqasm-1.0.4-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:3da719066bbb2f066b3ea7c1d23ad27db7bd5934f1c61828f320e91528c40ea0", size = 213307, upload-time = "2026-07-15T14:38:37.066Z" },
     { url = "https://files.pythonhosted.org/packages/fb/ba/5b75940ab8bc08f19cb7701e844aee27d9a6cb82c6c1150bace06fe4d649/pyqasm-1.0.4-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e58bc3afb64214b6fb142573ae07b11be1e2bec07b57905e6d5cafe2fe6ba1b2", size = 734659, upload-time = "2026-07-15T14:38:38.222Z" },
     { url = "https://files.pythonhosted.org/packages/26/ac/77b905215b336b533ae01ac4870c5bb5512b9df22454b86265c34732bf64/pyqasm-1.0.4-cp314-cp314-win_amd64.whl", hash = "sha256:075299a575111d597754c5592b3e4fa5e7d24d53f9bbd73a748f2beb41dc62ef", size = 210817, upload-time = "2026-07-15T14:38:39.383Z" },
+]
+
+[[package]]
+name = "pyqir"
+version = "0.12.8"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f9/b8/91e44aa8c9da59ce1d1cd50a29443fb4f12a21303a4d030c60ab1a73a414/pyqir-0.12.8-cp315-abi3.abi3t-manylinux_2_28_aarch64.whl", hash = "sha256:f0734feb441dd714cdacff439f9b422ff12cb9c1d1bba2f417f3465a247517f5", size = 2182163, upload-time = "2026-10-30T20:53:17.682Z" },
+    { url = "https://files.pythonhosted.org/packages/86/de/fd44ec4d24354be87726fe90945181e653fafa61c4d9dc2c5255067bf9f8/pyqir-0.12.8-cp315-abi3.abi3t-manylinux_2_28_x86_64.whl", hash = "sha256:9c34959a2a2e8165c1739f82cbea807654971e96f3b07ce451fa90534de59100", size = 2176235, upload-time = "2026-10-30T20:53:20.115Z" },
+    { url = "https://files.pythonhosted.org/packages/90/6e/30e7b9d83daf48bdcac07e6a4faf7573cb936b0ffd2bc08c90e1f8771d94/pyqir-0.12.8-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:d53e27d3dd9badf417f8747e111ec140d0abb6235a117f29077e7f928292f9b7", size = 2157533, upload-time = "2026-10-30T20:53:22.108Z" },
+    { url = "https://files.pythonhosted.org/packages/ee/fe/9f8cb12c8e0d446a162ffb3ee3a2c6f9ea87b217f9213a25a07d7ee2d471/pyqir-0.12.8-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:4dc166cb442cc8560b72ee4c25374452ab2a6a36cc8cb8aa67376335748a7c9b", size = 2109186, upload-time = "2026-10-30T20:53:24.133Z" },
+    { url = "https://files.pythonhosted.org/packages/32/65/3235dcfdf7026587407e5e6607bce53120b28512ff110e36f8c5e928bcd4/pyqir-0.12.8-cp39-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:60b762a4452540ed139a2a0d37b8c2e85b4f09c3b0f7816968d15fe61fa0b6eb", size = 2118306, upload-time = "2026-10-30T20:53:26.312Z" },
+    { url = "https://files.pythonhosted.org/packages/67/92/9fef0c50986482846d85de5ac62a9967b6f6a1a807bcb95eec6bad377109/pyqir-0.12.8-cp39-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:47ff49878ef42e24a21516445c4f9c479ef8695f8be1a97e9999f1122ae2842b", size = 2084968, upload-time = "2026-10-30T20:53:28.426Z" },
+    { url = "https://files.pythonhosted.org/packages/b4/26/bfbdeba86777a6f427e0eb7436dc37f80f19c4a971ea1dd082b842773933/pyqir-0.12.8-cp39-abi3-win_amd64.whl", hash = "sha256:f62b0554e62607cc5a6d1aefd3bec64d8779a76fb0454584c5c5f16bd5b6555b", size = 1970377, upload-time = "2026-10-30T20:53:30.502Z" },
+    { url = "https://files.pythonhosted.org/packages/88/ee/e36ef07b44face43aa342fca1a58b4f4690814fe1b085b5ae3cdfe22cca9/pyqir-0.12.8-cp39-abi3-win_arm64.whl", hash = "sha256:23d0f5dd8e1000baddfd42a9b23d9911d535b1b35da0d0a20a532fd7de0f4441", size = 1869302, upload-time = "2026-10-30T20:53:32.169Z" },
 ]
 
 [[package]]
