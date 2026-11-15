@@ -32,6 +32,7 @@ from benchmark.preparation.backend.iqm_garnet_20q_emulation import (
 from benchmark.preparation.backend.iqm_emerald_54q import IQMEmerald54q
 from benchmark.preparation.backend.scaleway_base import ScalewayProvided
 from benchmark.preparation.backend.qiskit_aer import QiskitAer
+from benchmark.preparation.backend.qiskit_aer_scaleway import QiskitAerScaleway
 
 
 BACKEND_NAMES: dict[str, Type[Backend]] = {
@@ -39,10 +40,12 @@ BACKEND_NAMES: dict[str, Type[Backend]] = {
     "IQMGarnet20qEmulation": IQMGarnet20qEmulation,
     "IQMEmerald54q": IQMEmerald54q,
     "QiskitAer": QiskitAer,
+    "QiskitAerScaleway": QiskitAerScaleway,
     "iqm_garnet_20q": IQMGarnet20q,
     "iqm_garnet_20q_emulation": IQMGarnet20qEmulation,
     "iqm_emerald_54q": IQMEmerald54q,
     "qiskit_aer": QiskitAer,
+    "qiskit_aer_scaleway": QiskitAerScaleway,
 }
 
 

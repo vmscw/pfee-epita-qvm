@@ -1,5 +1,3 @@
-from typing import Self
-from pydantic import model_validator
 import functools
 from pathlib import Path
 
@@ -38,6 +36,17 @@ class Config(BaseSettings):
     """When using a simulator, whether to add noise to the backend."""
 
 
+class AuthConfig(BaseSettings):
+    """Global configuration to use when connecting to external APIs."""
+
+    model_config = SettingsConfigDict(env_file=".env", frozen=True)
+
+    SCW_PROJECT_ID: str = ""
+    """Scaleway project ID. Only accessed when using a Scaleway backend."""
+    SCW_SECRET_KEY: str = ""
+    """Scaleway project ID. Only accessed when using a Scaleway backend."""
+
+
 @functools.lru_cache()
 def invoke_config() -> Config:
     """Return the configuration of the benchmark runtime.
@@ -50,7 +59,21 @@ def invoke_config() -> Config:
     return Config()
 
 
+@functools.lru_cache()
+def invoke_auth_config() -> AuthConfig:
+    """Return authentication credentials.
+
+    The runtime configuration is meant to be used as a read-only singleton.
+
+    Returns:
+        Config: the configuration singleton
+    """
+    return AuthConfig()
+
+
 __all__ = [
+    "AuthConfig",
     "Config",
     "invoke_config",
+    "invoke_auth_config",
 ]
