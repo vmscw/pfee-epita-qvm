@@ -31,6 +31,13 @@ class Job(Protocol):
             states.
         """
 
+    def duration(self) -> float:
+        """Return the runtime duration of the job in milliseconds.
+
+        Returns:
+            A duration in milliseconds
+        """
+
 
 class Scheduler(Protocol):
     """Interface of a arbitrary quantum virtual machines scheduler.

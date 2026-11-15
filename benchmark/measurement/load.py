@@ -52,24 +52,11 @@ def measure(experiment: Experiment) -> bool:
         bool: True if all metrics could have been extracted from results.
               False otherwise.
     """
-    # NOTE: in IBM Quantum Runtime, one may retrieve the total runtime
-    #       duration of a job directly using job.usage(). this is thanks
-    #       to a special method usage() that belongs specifically to the
-    #       RuntimeJobV2 only available with the IBM runtime
-    #       the Scaleway runtime and Qiskit AER jobs return instances of JobV1,
-    #       which doesn't have this method. thus, there might be no way to know
-    #       the total duration of a job yet
-
-    # FIXME: find a way to retrieve the total runtime duration of a job
-
-    # See-Also:
-    #   https://quantum.cloud.ibm.com/docs/en/api/qiskit-ibm-runtime/runtime-job-v2#usage
-    duration = 0.0
-
     job_id = experiment.job.id
     n_qubits = experiment.n_qubits
     total_qubits = experiment.backend.num_qubits
     results = experiment.job.result()
+    duration = experiment.job.duration()
 
     for name, counts in results.items():
         # NOTE: almost every metric can be computed from the experiment alone.

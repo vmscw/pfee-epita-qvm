@@ -1,5 +1,6 @@
 from collections import Counter
 from collections.abc import Sequence
+import warnings
 
 from qiskit.providers import JobV1
 
@@ -25,6 +26,18 @@ class SequentialJob:
         result = self._job.result()
         name = self.circuits[0]
         return {name: result.get_counts()}
+
+    def duration(self) -> float:
+        result = self._job.result()
+
+        duration_s = result.metadata.get("time_taken_execute", 0.0)
+
+        if duration_s == 0.0:
+            warnings.warn(
+                f"duration for job {self.id} is zero. it might be unavailable"
+            )
+
+        return duration_s * 1000
 
 
 class Sequential:
