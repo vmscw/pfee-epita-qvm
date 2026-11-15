@@ -1,12 +1,13 @@
-from benchmark.preparation.backend.scaleway_base import ScalewayProvided
+from benchmark.preparation.backend.iqm_base import IQMProvided
 
 
-class IQMEmerald54q(ScalewayProvided):
+class IQMEmerald54q(IQMProvided):
     """Backend relying on the IQM Emerald quantum computer with 54 qubits."""
 
     def __init__(self):
-        super().__init__(backend="QPU-EMERALD-54PQ")
+        super().__init__(name="emerald")
         self.name = "iqm-emerald-54q"
+        self.num_qubits = 54
 
 
 __all__ = ["IQMEmerald54q"]

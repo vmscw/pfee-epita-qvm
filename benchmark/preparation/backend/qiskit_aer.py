@@ -60,7 +60,9 @@ class QiskitAer:
             return None
 
         if qiskit_circuit.num_qubits > self._max_size:
-            warnings.warn("Circuit contains more than 10 qubits. Ignoring it.")
+            warnings.warn(
+                f"Circuit contains more than {self._max_size} qubits. Ignoring it."
+            )
             return None
 
         transpiled_circuit = qiskit.transpile(
