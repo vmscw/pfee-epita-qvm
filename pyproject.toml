@@ -12,6 +12,7 @@ dependencies = []
 [project.scripts]
 pfee-epita-qvm = "pfee_epita_qvm:main"
 benchmark = "benchmark.main:main"
+fidelity = "scripts.fidelity:main"
 
 [project.optional-dependencies]
 benchmark = [
