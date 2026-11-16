@@ -9,6 +9,7 @@ from benchmark.config import invoke_config
 from benchmark.experiment import run
 from benchmark.measurement import measure, save_measurements, save_metadata
 from benchmark.preparation import get_cases, get_backend, get_scheduler
+from benchmark.utils import build_color_handler
 
 
 LOADING_BENCHMARK = "Loadng benchmark {} with args: scheduler: {}, backend: {}"
@@ -18,8 +19,12 @@ WAITING_FOR_EXPERIMENT = "Started experiment with job id {} containing {} circui
 
 
 logging.basicConfig(
-    format="[%(asctime)s][%(name)s][%(levelname)s] - %(message)s",
-    datefmt="%m/%d/%Y %I:%M:%S",
+    handlers=[
+        build_color_handler(
+            fmt="[%(asctime)s][%(levelname)s][%(name)s] - %(message)s",
+            datefmt="%m/%d/%Y %I:%M:%S",
+        ),
+    ],
 )
 logger = logging.getLogger("benchmark")
 
