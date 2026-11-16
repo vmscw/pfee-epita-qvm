@@ -1,0 +1,6 @@
+[submodule "misc/QASMBench"]
+	path = misc/QASMBench
+	url = git@github.com:pnnl/QASMBench.git
+[submodule "misc/HyperQ"]
+	path = misc/HyperQ
+	url = git@github.com:1640675651/HyperQ.git
