@@ -1,3 +1,5 @@
+import warnings
+from qiskit.providers.exceptions import JobError
 from benchmark.experiment import Experiment
 from benchmark.measurement.globals import (
     Record,
@@ -55,13 +57,23 @@ def measure(experiment: Experiment) -> bool:
     job_id = experiment.job.id
     n_qubits = experiment.n_qubits
     total_qubits = experiment.backend.num_qubits
-    results = experiment.job.result()
+
+    try:
+        results = experiment.job.result()
+    except JobError:
+        warnings.warn(
+            f"Execution failed for job {job_id} containing the followings "
+            f"circuits: {experiment.job.circuits}. Its results will not be "
+            "added to the benchmark records."
+        )
+        return False
+
     duration = experiment.job.duration()
 
     for name, counts in results.items():
         # NOTE: almost every metric can be computed from the experiment alone.
         #       this is not the case for fidelity: it can be only computed
-        #       using a reference, which a run of the circuit in a noiseless
+        #       using a reference, which is a run of the circuit in a noiseless
         #       environment
         circuit_record = {
             "name": name,
