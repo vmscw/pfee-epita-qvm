@@ -28,10 +28,17 @@ Packages:
   (composite circuit + run -> counts).
 - `hypervisor`: chains the steps (queue, statuses, run loop).
 
+- `log`: logging of the package, level `ULTRAQ_LOG_LEVEL` (env or `.env`,
+  default INFO), set up here at import.
+
 `model` never imports `steps`; `ultraq_backend` never imports `ultraq_qiskit_connector`.
 """
 
-from ultraq_backend.hypervisor import Hypervisor
-from ultraq_backend.model.chip_layout import ChipLayout
+from ultraq_backend.log import setup_logging
+
+setup_logging()
+
+from ultraq_backend.hypervisor import Hypervisor  # noqa: E402  (after the logging setup)
+from ultraq_backend.model.chip_layout import ChipLayout  # noqa: E402
 
 __all__ = ["ChipLayout", "Hypervisor"]

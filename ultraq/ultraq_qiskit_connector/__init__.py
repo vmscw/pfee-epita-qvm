@@ -14,8 +14,12 @@ This package sits on top of the `ultraq_backend` core: it only uses a `Hyperviso
 `categories`, `fusion_candidates`). The core never imports it.
 """
 
-from ultraq_qiskit_connector.backend import CategoryBackend, FusedBackend
-from ultraq_qiskit_connector.job import UltraqJob
-from ultraq_qiskit_connector.provider import UltraqProvider
+from ultraq_backend.log import setup_logging
+
+setup_logging()  # also configures this package's logger (idempotent)
+
+from ultraq_qiskit_connector.backend import CategoryBackend, FusedBackend  # noqa: E402
+from ultraq_qiskit_connector.job import UltraqJob  # noqa: E402
+from ultraq_qiskit_connector.provider import UltraqProvider  # noqa: E402
 
 __all__ = ["CategoryBackend", "FusedBackend", "UltraqJob", "UltraqProvider"]

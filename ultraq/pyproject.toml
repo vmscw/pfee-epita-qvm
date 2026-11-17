@@ -5,9 +5,10 @@ description = "Multiprogramming of quantum VMs (qVMs) on one chip, inspired by H
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "iqm-client[qiskit]==36.0.0",
     "python-dotenv>=1.0",
-    "qiskit>=2.1",
-    "qiskit-aer>=0.17",
+    "qiskit>=2.1,<2.2",  # iqm-client 36 requires qiskit < 2.2
+    "qiskit-aer>=0.17,<0.18",
     "rustworkx>=0.15",
 ]
 

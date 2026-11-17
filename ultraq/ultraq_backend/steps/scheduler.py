@@ -10,8 +10,12 @@ This module must not know the circuits' content, the physical qubits (see
 
 from __future__ import annotations
 
+import logging
+
 from ultraq_backend.model.jobs import Decision, Job
 from ultraq_backend.model.virtual_topology import VirtualTopology
+
+log = logging.getLogger(__name__)
 
 
 class Scheduler:
@@ -47,11 +51,19 @@ class Scheduler:
         remaining: list[Job] = []
         for job in queue:
             vms = None
-            if free and (not decisions or job.shots == decisions[0][0].shots):
+            if not free:
+                reason = "no free VM"
+            elif decisions and job.shots != decisions[0][0].shots:
+                reason = "shots differ from the batch's"
+            else:
                 vms = self.place(job, free)
+                reason = "no free VM of its category" if "category" in job.request else "its VMs are not all free"
             if vms is None:
+                log.debug("job %s %s waits: %s", job.job_id[:8], job.request, reason)
                 remaining.append(job)
                 continue
             free -= set(vms)
             decisions.append((job, vms))
+            log.debug("job %s %s placed on %s", job.job_id[:8], job.request, vms)
+        log.debug("scheduling: %d placed, %d waiting", len(decisions), len(remaining))
         return decisions, remaining

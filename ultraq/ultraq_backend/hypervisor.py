@@ -9,11 +9,14 @@ same window can share a batch; `result()` only waits; `stop()` (or leaving a
 `with Hypervisor(...) as hv:` block) ends the thread and runs what is left.
 
 This module must not know any vendor (the `ChipLayout` carries the chip); running a
-batch is delegated to the `Executor`.
+batch is delegated to the `Executor`. It logs the hypervisor life cycle, each
+submitted and finished job and each batch with its duration (failures with
+their traceback).
 """
 
 from __future__ import annotations
 
+import logging
 import threading
 import time
 import uuid
@@ -24,17 +27,14 @@ from qiskit import QuantumCircuit
 
 from ultraq_backend.model.chip_layout import ChipLayout
 from ultraq_backend.model.chips import PhysicalChip
-from ultraq_backend.model.jobs import Job, JobState
+from ultraq_backend.model.jobs import Decision, Job, JobState
 from ultraq_backend.model.virtual_topology import VirtualTopology
-from ultraq_backend.steps.executor import Executor
+from ultraq_backend.steps.executor import AerExecutor, Executor
 from ultraq_backend.steps.mapping import Mapper
 from ultraq_backend.steps.scheduler import Scheduler
 from ultraq_backend.steps.validation import check_circuit
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-"""Root of the project (parent of the `ultraq_backend` package)."""
-
-_POLL = 0.2  # seconds: how often a waiting `result()` checks that the background thread is alive
+log = logging.getLogger(__name__)
 
 
 class Hypervisor:
@@ -42,11 +42,11 @@ class Hypervisor:
 
     chip_layout: a `PhysicalChip` (default layout: the whole chip as one VM,
                  see `ChipLayout.whole_chip`), a `ChipLayout`, or the path of a
-                 layout JSON file cutting the chip into several VMs (relative
-                 paths are resolved against `PROJECT_ROOT`).
-    executor:    the `Executor` running the batches; default `Executor()` (Aer).
-                 Any object with the same `execute(batch, shots)` works (e.g.
-                 a fake one).
+                 layout JSON file cutting the chip into several VMs (a relative
+                 path is relative to the current directory, as for `open`).
+    executor:    the `Executor` running the batches; default `AerExecutor()`
+                 (e.g. `IQMExecutor(chip)` for the real chip, or a fake
+                 `Executor` subclass in tests).
     interval:    seconds between two runs of the queue by the background
                  thread (started here, a daemon thread); must be > 0.
 
@@ -70,10 +70,9 @@ class Hypervisor:
         if isinstance(chip_layout, PhysicalChip):
             chip_layout = ChipLayout.whole_chip(chip_layout)
         elif not isinstance(chip_layout, ChipLayout):
-            path = Path(chip_layout)
-            chip_layout = ChipLayout.from_file(path if path.is_absolute() else PROJECT_ROOT / path)
+            chip_layout = ChipLayout.from_file(chip_layout)
         self.chip_layout = chip_layout
-        self.executor = executor if executor is not None else Executor()
+        self.executor = executor if executor is not None else AerExecutor()
         self.scheduler = Scheduler(self.virtual_topology)
         self.mapper = Mapper(self.chip_layout)
         self.jobs: dict[str, Job] = {}
@@ -88,6 +87,13 @@ class Hypervisor:
             target=self._loop, args=(interval,), name="ultraq-hypervisor", daemon=True
         )
         self._thread.start()
+        log.info(
+            "hypervisor started: interval %s s, executor %s, %d categories, %d VMs",
+            interval,
+            type(self.executor).__name__,
+            len(self.virtual_topology.categories),
+            len(self.virtual_topology.vms),
+        )
 
     @property
     def virtual_topology(self) -> VirtualTopology:
@@ -121,6 +127,7 @@ class Hypervisor:
             check_circuit(circuit, graph, self.virtual_topology.basis_gates)
         except ValueError as exc:
             where = f"category {category!r}" if category is not None else f"VMs {list(vms)}"
+            log.debug("circuit %r rejected on %s: %s", circuit.name, where, exc)
             raise ValueError(
                 f"circuit {circuit.name!r} cannot run as-is on {where}: {exc}. "
                 "Transpile it first on that target (e.g. `transpile(qc, backend)`)."
@@ -135,6 +142,7 @@ class Hypervisor:
                 raise RuntimeError("hypervisor stopped: create a new one to submit jobs")
             self.jobs[job.job_id] = job
             self.queue.append(job)
+        log.info("job %s submitted: %s, %d shots", job.job_id[:8], _where(request), shots)
         return job.job_id
 
     def job(self, job_id: str) -> Job:
@@ -166,7 +174,8 @@ class Hypervisor:
                     raise RuntimeError(
                         f"job {job_id} is {job.status} but the hypervisor thread died (see its traceback)"
                     )
-                wait = _POLL if deadline is None else min(_POLL, deadline - time.monotonic())
+                # wake up every 0.2 s to re-check that the background thread is alive (a dead thread never notifies)
+                wait = 0.2 if deadline is None else min(0.2, deadline - time.monotonic())
                 if wait <= 0:
                     raise TimeoutError(f"job {job_id} still {job.status} after {timeout} s")
                 self._changed.wait(wait)
@@ -182,13 +191,17 @@ class Hypervisor:
         thread = self._thread
         if thread is None:
             return
+        log.info("stopping hypervisor")
         with self._lock:
             self._stop.set()  # from now on `submit` refuses jobs
         thread.join()
+        with self._lock:
+            drained = len(self.queue)  # (for the log only; a concurrent `stop()` may drain too)
         self._run_queue()
         with self._changed:
             self._thread = None
             self._changed.notify_all()
+        log.info("hypervisor stopped (%d job(s) drained)", drained)
 
     def __enter__(self) -> Self:
         return self
@@ -221,9 +234,11 @@ class Hypervisor:
                 if not self.queue:
                     return
                 taken = self.queue
+                log.debug("queue: %d job(s)", len(taken))
                 try:
                     decisions, self.queue = self.scheduler.schedule(taken)
                 except Exception as exc:  # a scheduler bug must not leave jobs hanging
+                    log.exception("scheduler failed on %d job(s)", len(taken))
                     self.queue = []
                     for job in taken:
                         self._finish(job, error=exc)
@@ -233,15 +248,19 @@ class Hypervisor:
                         self._finish(job, error=RuntimeError(f"job {job.job_id} can never be placed"))
                     self.queue = []
                     return
+                log.debug("scheduler: %d job(s) placed, %d left waiting", len(decisions), len(self.queue))
                 jobs = [job for job, _ in decisions]
                 try:
                     batch = self.mapper.map(decisions)
                 except Exception as exc:  # e.g. an inconsistent layout: fail this batch only
+                    log.exception("mapper failed on a batch of %d job(s)", len(jobs))
                     for job in jobs:
                         self._finish(job, error=exc)
                     continue
                 for job in jobs:
                     job.status = JobState.RUNNING
+            log.info("batch of %d job(s): %s", len(decisions), _placements(decisions))
+            start = time.monotonic()
             try:
                 counts = self.executor.execute(batch.jobs, batch.shots)
                 if len(counts) != len(batch.jobs):
@@ -249,10 +268,12 @@ class Hypervisor:
                         f"executor returned {len(counts)} results for {len(batch.jobs)} jobs"
                     )
             except Exception as exc:  # the target may raise anything
+                log.exception("batch failed after %.2f s", time.monotonic() - start)
                 with self._lock:
                     for job in jobs:
                         self._finish(job, error=exc)
                 continue
+            log.info("batch done in %.2f s", time.monotonic() - start)
             with self._lock:
                 self.history.append([(job.job_id, list(vms)) for job, vms in decisions])
                 for job, job_counts in zip(jobs, counts, strict=True):
@@ -262,6 +283,10 @@ class Hypervisor:
         """Mark `job` DONE with its counts, or ERROR with its cause (lock held), and wake `result()` up."""
         job.counts, job.error = counts, error
         job.status = JobState.ERROR if error is not None else JobState.DONE
+        if error is not None:
+            log.error("job %s failed: %s", job.job_id[:8], error)
+        else:
+            log.info("job %s done", job.job_id[:8])
         self._changed.notify_all()
 
     def __repr__(self) -> str:
@@ -273,3 +298,15 @@ class Hypervisor:
 
 def _finished(job: Job) -> bool:
     return job.status in (JobState.DONE, JobState.ERROR)
+
+
+def _where(request: dict) -> str:
+    """Short description of a job request, for log lines."""
+    if "category" in request:
+        return f"category {request['category']}"
+    return "VMs " + "+".join(request["vms"])
+
+
+def _placements(decisions: list[Decision]) -> str:
+    """'id->vm, ...' (short job ids) of a batch, for log lines."""
+    return ", ".join(job.job_id[:8] + "->" + "+".join(vms) for job, vms in decisions)

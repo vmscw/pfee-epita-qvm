@@ -22,6 +22,7 @@ vendor or gate name.
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -29,6 +30,8 @@ from typing import Any
 from ultraq_backend.model.chips import CACHE_ROOT, PhysicalChip, load_chip
 from ultraq_backend.model.virtual_topology import VirtualTopology, topology_from_dicts
 from ultraq_backend.model.vm import connector_number
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -51,6 +54,12 @@ class ChipLayout:
 
     def __post_init__(self) -> None:
         self.check()
+        topology = self.virtual_topology
+        log.info(
+            "Layout built: chip %s, snapshot %s, %d categories, %d VMs, %d physical qubits used",
+            self.physical_chip.id, self.physical_chip.snapshot, len(topology.categories),
+            len(topology.vms), len({p for m in self.mapping.values() for p in m.values()}),
+        )
 
     @classmethod
     def from_dict(cls, data: dict[str, Any], root: str | Path = CACHE_ROOT) -> ChipLayout:
@@ -77,6 +86,7 @@ class ChipLayout:
         `chip.active_qubits[i]`), edges are the active couplers. Inactive
         qubits are left out, so node indices may differ from physical indices.
         """
+        log.debug("Whole-chip layout for %s (snapshot %s)", chip.id, chip.snapshot)
         active = chip.active_qubits
         label = {p: f"q{i}" for i, p in enumerate(active)}
         topology = topology_from_dicts(
@@ -98,6 +108,7 @@ class ChipLayout:
     @classmethod
     def from_file(cls, path: str | Path, root: str | Path = CACHE_ROOT) -> ChipLayout:
         """Load a layout JSON file (see `from_dict`)."""
+        log.debug("Loading layout file %s", path)
         return cls.from_dict(json.loads(Path(path).read_text()), root)
 
     def check(self) -> None:

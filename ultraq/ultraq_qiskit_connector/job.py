@@ -6,26 +6,21 @@ into a standard `qiskit.result.Result` (so `get_counts()` works as with Aer,
 and `memory=True` for the primitives).
 
 This module must not know the scheduling, the VMs used or any physical
-qubit: it only sees a job id, a status string and counts.
+qubit: it only sees a job id, a status string and counts. Result fetches
+are logged at DEBUG.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import logging
+from typing import Any
 
 from qiskit.providers import JobError, JobStatus, JobV1
 from qiskit.result import Result
 
-if TYPE_CHECKING:
-    from ultraq_backend.hypervisor import Hypervisor
+from ultraq_backend.hypervisor import Hypervisor
 
-_STATUS = {
-    "QUEUED": JobStatus.QUEUED,
-    "RUNNING": JobStatus.RUNNING,
-    "DONE": JobStatus.DONE,
-    "ERROR": JobStatus.ERROR,
-}
-
+log = logging.getLogger(__name__)
 
 class UltraqJob(JobV1):
     """One circuit queued in a hypervisor (created by `backend.run`).
@@ -57,7 +52,7 @@ class UltraqJob(JobV1):
 
     def status(self) -> JobStatus:
         """Current status of the job, as a `qiskit.providers.JobStatus`."""
-        return _STATUS[self._hypervisor.status(self.job_id())]
+        return JobStatus[self._hypervisor.status(self.job_id())]  # JobState names = JobStatus names
 
     def result(self) -> Result:
         """The job result (cached). Raises JobError if the job failed.
@@ -68,8 +63,10 @@ class UltraqJob(JobV1):
             try:
                 counts = self._hypervisor.result(self.job_id())
             except RuntimeError as exc:
+                log.debug("job %s: result failed (%s)", self.job_id()[:8], self._hypervisor.status(self.job_id()))
                 raise JobError(str(exc)) from exc
             self._result = self._build_result(counts)
+            log.debug("job %s: result fetched (%d outcomes)", self.job_id()[:8], len(counts))
         return self._result
 
     def _build_result(self, counts: dict[str, int]) -> Result:
