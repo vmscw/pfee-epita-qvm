@@ -12,6 +12,11 @@ dependencies = [
     "rustworkx>=0.15",
 ]
 
+[project.optional-dependencies]
+plot = [
+    "matplotlib>=3.11.2",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=8",

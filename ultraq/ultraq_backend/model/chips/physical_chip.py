@@ -88,6 +88,8 @@ class PhysicalChip:
     symmetric_gates: vendor names of the 2-qubit gates usable both ways.
     snapshot: identifier of the calibration snapshot (None if none).
     raw_metrics: raw values tied to no single qubit or coupler.
+    positions: {physical qubit index: (x, y)} drawing coordinates of every
+        qubit (used by `ChipLayout.plot`); None if unknown.
 
     Only what every vendor has belongs here; a chip subclass adds its own
     vendor-specific fields, which generic code never reads.
@@ -101,6 +103,7 @@ class PhysicalChip:
     graph: rx.PyGraph
     snapshot: str | None = None
     raw_metrics: list[RawMetric] = field(default_factory=list)
+    positions: dict[int, tuple[float, float]] | None = None
 
     # ------------------------------------------------------------ chip class contract
 

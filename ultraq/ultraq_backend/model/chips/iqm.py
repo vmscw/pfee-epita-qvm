@@ -23,14 +23,19 @@ Snapshot -> PhysicalChip:
   qubit (one label) or on the chip (anything else);
 - typed values from `metrics.json` (non-invalid values only): T1, T2
   (Ramsey `t2_time`), fidelity of `prx` (-> "r") and `measure` per qubit, of
-  `cz` per pair. Everything else (e.g. `t2_echo_time`) stays in `raw_metrics`.
+  `cz` per pair. Everything else (e.g. `t2_echo_time`) stays in `raw_metrics`;
+- positions (for drawing), from the coupling graph with every coupler: IQM
+  numbers the qubits row by row on a square grid, so a maximal run of
+  consecutive indices joined by couplers is a row, and a coupler to the
+  previous row aligns the columns; the grid is turned by 45 degrees like
+  IQM's own view (x = col - row, y = row + col, QB1 at the bottom).
 
 Cache: `<root>/<qpu>/<UTC timestamp>/{calibration_set,metrics,dynamic_quantum_architecture,meta}.json`,
 root = `calibration_data/` at the project root by default (gitignored).
 Connection settings come from the environment (a `.env` file at or above the
-current directory is loaded first): `IQM_URL`, the Resonance server (e.g.
-`https://resonance.iqm.tech`, the REST API is under `/api/v1`) and
-`IQM_CALIBRATION_TOKEN`, the token for fetching the calibration. Both only
+current directory is loaded first): `IQM_URL`, the Resonance server (the
+REST API is under `/api/v1`) and `IQM_CALIBRATION_TOKEN`, the token for
+fetching the calibration. Both only
 from the environment, never as arguments, and never in an error message. The
 run token (`IQM_TOKEN`) belongs to the executor (`ultraq_backend.steps.executor.iqm`).
 """
@@ -239,6 +244,22 @@ def _build_chip(cls: type[PhysicalChip], chip_id: str, name: str, snapshot: str,
         couplers[key] = Coupler(active=key in with_cz)
         graph.add_edge(a, b, couplers[key])
 
+    # Drawing positions on the grid (see the module docstring).
+    n = len(labels)
+    row, col = [0] * n, [0] * n
+    for i in range(1, n):
+        row[i] = row[i - 1] + (not graph.has_edge(i - 1, i))
+    for i in range(1, n):
+        if row[i] == row[i - 1]:
+            col[i] = col[i - 1] + 1
+        else:  # first qubit of a row: align on any coupler j-k to the previous row
+            j, k = next(
+                ((j, k) for j in range(i, n) if row[j] == row[i] for k in graph.neighbors(j) if row[k] == row[i] - 1),
+                (i, None),
+            )
+            col[i] = 0 if k is None else col[k] - (j - i)
+    positions = {i: (float(col[i] - row[i]), float(row[i] + col[i])) for i in range(n)}
+
     chip = cls(
         id=chip_id,
         name=name,
@@ -247,6 +268,7 @@ def _build_chip(cls: type[PhysicalChip], chip_id: str, name: str, snapshot: str,
         symmetric_gates=set(SYMMETRIC_GATES),
         graph=graph,
         snapshot=snapshot,
+        positions=positions,
         calibration_set_id=dqa.get("calibration_set_id"),
         gate_loci=loci,
     )
