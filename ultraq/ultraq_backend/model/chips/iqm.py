@@ -23,30 +23,38 @@ Snapshot -> PhysicalChip:
   qubit (one label) or on the chip (anything else);
 - typed values from `metrics.json` (non-invalid values only): T1, T2
   (Ramsey `t2_time`), fidelity of `prx` (-> "r") and `measure` per qubit, of
-  `cz` per pair. Everything else (e.g. `t2_echo_time`) stays in `raw_metrics`.
+  `cz` per pair. Everything else (e.g. `t2_echo_time`) stays in `raw_metrics`;
+- positions (for drawing), from the coupling graph with every coupler: IQM
+  numbers the qubits row by row on a square grid, so a maximal run of
+  consecutive indices joined by couplers is a row, and a coupler to the
+  previous row aligns the columns; the grid is turned by 45 degrees like
+  IQM's own view (x = col - row, y = row + col, QB1 at the bottom).
 
 Cache: `<root>/<qpu>/<UTC timestamp>/{calibration_set,metrics,dynamic_quantum_architecture,meta}.json`,
 root = `calibration_data/` at the project root by default (gitignored).
-The token comes from the argument, else `IQM_TOKEN` (a `.env` file at or above
-the current directory is loaded first); it never appears in an error message.
+Connection settings come from the environment (a `.env` file at or above the
+current directory is loaded first): `IQM_URL`, the Resonance server (the
+REST API is under `/api/v1`) and `IQM_CALIBRATION_TOKEN`, the token for
+fetching the calibration. Both only
+from the environment, never as arguments, and never in an error message. The
+run token (`IQM_TOKEN`) belongs to the executor (`ultraq_backend.steps.executor.iqm`).
 """
 
 from __future__ import annotations
 
 import json
-import os
+import logging
 import re
 import urllib.error
 import urllib.parse
 import urllib.request
-import warnings
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
 import rustworkx as rx
-from dotenv import find_dotenv, load_dotenv
 
+from ultraq_backend.env import from_env
 from ultraq_backend.model.chips.physical_chip import (
     Coupler,
     PhysicalChip,
@@ -54,10 +62,8 @@ from ultraq_backend.model.chips.physical_chip import (
     RawMetric,
 )
 
-BASE_URL = "https://resonance.iqm.tech/api/v1"
-TOKEN_ENV = "IQM_TOKEN"
-USER_AGENT = "ultraq/0.1"
-"""Sent explicitly: the API's firewall answers 403 to urllib's default "Python-urllib/3.x"."""
+log = logging.getLogger(__name__)
+
 
 CACHE_ROOT = Path(__file__).resolve().parents[3] / "calibration_data"
 """Default cache root: `calibration_data/` at the project root (independent of the cwd)."""
@@ -67,9 +73,9 @@ GATES = {"prx": "r", "cz": "cz"}
 
 SYMMETRIC_GATES = {"cz"}
 
-_TIMESTAMP_FORMAT = "%Y%m%dT%H%M%SZ"
-_QB = re.compile(r"QB\d+")
-_TC = re.compile(r"TC-(\d+)-(\d+)")
+_SNAPSHOT_FORMAT = "%Y%m%dT%H%M%SZ"
+_REGEX_QB = re.compile(r"QB\d+")
+_REGEX_TC = re.compile(r"TC-(\d+)-(\d+)")
 
 
 # ---------------------------------------------------------------- HTTP
@@ -79,65 +85,57 @@ class _NotFound(RuntimeError):
     """The server answered 404: an error, except for the metrics endpoint where it is tolerated."""
 
 
-def _get_json(url: str, token: str, timeout: float):
-    """GET `url` with the Bearer token and decode its JSON body (no message ever contains the token)."""
+def _get_json(server: str, path: str, token: str, timeout: float):
+    """GET `<server>/api/v1/<path>` with the Bearer token and decode its JSON body.
+
+    No message ever contains the token; logs show `path` only (never the server URL).
+    """
+    url = f"{server}/api/v1/{path}"
+    log.debug("GET %s (timeout %ss)", path, timeout)
     request = urllib.request.Request(
         url,
         headers={
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
-            "User-Agent": USER_AGENT,
+            "User-Agent": "ultraq/0.1",  # the API's firewall answers 403 to urllib's default "Python-urllib/3.x"
         },
         method="GET",
     )
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             body = response.read()
+            status = getattr(response, "status", None)
     except urllib.error.HTTPError as exc:
+        log.debug("GET %s -> HTTP %s", path, exc.code)
         if exc.code == 404:
             raise _NotFound(f"IQM API error: HTTP 404 ({exc.reason}) on GET {url}") from None
         raise RuntimeError(f"IQM API error: HTTP {exc.code} ({exc.reason}) on GET {url}") from None
     except urllib.error.URLError as exc:
+        log.debug("GET %s -> unreachable", path)
         raise RuntimeError(f"IQM API unreachable: {exc.reason} on GET {url}") from None
     except TimeoutError:
+        log.debug("GET %s -> timeout", path)
         raise RuntimeError(f"IQM API timeout after {timeout}s on GET {url}") from None
+    log.debug("GET %s -> HTTP %s, %d bytes", path, status, len(body))
     try:
         return json.loads(body)
     except ValueError:
         raise RuntimeError(f"IQM API returned non-JSON content on GET {url}") from None
 
 
-def _resolve_token(token: str | None) -> str:
-    if token:
-        return token
-    load_dotenv(find_dotenv(usecwd=True))
-    token = os.environ.get(TOKEN_ENV)
-    if not token:
-        raise RuntimeError(
-            f"No IQM token: set the {TOKEN_ENV} environment variable "
-            f"or put {TOKEN_ENV}=... in a .env file at or above the current directory."
-        )
-    return token
-
-
-def _fetch_raw(qpu: str, calibration_set: str, token: str | None, timeout: float) -> dict:
+def _fetch_raw(qpu: str, calibration_set: str, timeout: float) -> dict:
     """Calibration set, metrics (None on 404) and DQA of `qpu`, raw, plus fetch metadata."""
-    token = _resolve_token(token)
-    base = (
-        f"{BASE_URL}/calibration-sets/"
-        f"{urllib.parse.quote(qpu, safe='')}/{urllib.parse.quote(calibration_set, safe='')}"
-    )
+    token = from_env("IQM_CALIBRATION_TOKEN", "IQM calibration token")
+    server = from_env("IQM_URL", "IQM server URL").rstrip("/")
+    base = f"calibration-sets/{urllib.parse.quote(qpu, safe='')}/{urllib.parse.quote(calibration_set, safe='')}"
     fetched_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-    cal = _get_json(base, token, timeout)
+    cal = _get_json(server, base, token, timeout)
     try:
-        metrics = _get_json(f"{base}/metrics", token, timeout)
+        metrics = _get_json(server, f"{base}/metrics", token, timeout)
     except _NotFound:
-        warnings.warn(
-            f"No quality metrics for calibration set {calibration_set!r} of {qpu!r} (HTTP 404).",
-            stacklevel=3,
-        )
+        log.warning("No quality metrics for calibration set %r of %r (HTTP 404).", calibration_set, qpu)
         metrics = None
-    dqa = _get_json(f"{base}/dynamic-quantum-architecture", token, timeout)
+    dqa = _get_json(server, f"{base}/dynamic-quantum-architecture", token, timeout)
     return {
         "meta": {"qpu": qpu, "requested_set": calibration_set, "fetched_at": fetched_at},
         "calibration_set": cal,
@@ -156,7 +154,7 @@ def _write_json(path: Path, data) -> None:
 def _save(raw: dict, root: str | Path) -> Path:
     """Write a fetched snapshot to `<root>/<qpu>/<timestamp>/`; return that directory."""
     meta = raw["meta"]
-    stamp = datetime.fromisoformat(meta["fetched_at"]).astimezone(timezone.utc).strftime(_TIMESTAMP_FORMAT)
+    stamp = datetime.fromisoformat(meta["fetched_at"]).astimezone(timezone.utc).strftime(_SNAPSHOT_FORMAT)
     directory = Path(root) / meta["qpu"] / stamp
     directory.mkdir(parents=True, exist_ok=True)
     _write_json(directory / "calibration_set.json", raw["calibration_set"])
@@ -164,6 +162,7 @@ def _save(raw: dict, root: str | Path) -> Path:
     if raw["metrics"] is not None:
         _write_json(directory / "metrics.json", raw["metrics"])
     _write_json(directory / "meta.json", {**meta, "has_metrics": raw["metrics"] is not None})
+    log.debug("Snapshot written to %s", directory)
     return directory
 
 
@@ -191,6 +190,8 @@ def _snapshot_dir(qpu: str, snapshot: str, root: str | Path) -> Path:
 
 def _read(directory: Path) -> dict:
     """Read back a cached snapshot (same shape as `_fetch_raw` returns)."""
+
+    log.debug("Reading snapshot from %s", directory)
 
     def load(name: str):
         path = directory / f"{name}.json"
@@ -231,7 +232,7 @@ def _build_chip(cls: type[PhysicalChip], chip_id: str, name: str, snapshot: str,
         pairs.setdefault(frozenset((a, b)), (a, b))
         with_cz.add(frozenset((a, b)))
     for obs in cal_obs:
-        for x, y in _TC.findall(obs["dut_field"]):
+        for x, y in _REGEX_TC.findall(obs["dut_field"]):
             if f"QB{x}" in index and f"QB{y}" in index:
                 a, b = index[f"QB{x}"], index[f"QB{y}"]
                 pairs.setdefault(frozenset((a, b)), (a, b))
@@ -243,6 +244,22 @@ def _build_chip(cls: type[PhysicalChip], chip_id: str, name: str, snapshot: str,
         couplers[key] = Coupler(active=key in with_cz)
         graph.add_edge(a, b, couplers[key])
 
+    # Drawing positions on the grid (see the module docstring).
+    n = len(labels)
+    row, col = [0] * n, [0] * n
+    for i in range(1, n):
+        row[i] = row[i - 1] + (not graph.has_edge(i - 1, i))
+    for i in range(1, n):
+        if row[i] == row[i - 1]:
+            col[i] = col[i - 1] + 1
+        else:  # first qubit of a row: align on any coupler j-k to the previous row
+            j, k = next(
+                ((j, k) for j in range(i, n) if row[j] == row[i] for k in graph.neighbors(j) if row[k] == row[i] - 1),
+                (i, None),
+            )
+            col[i] = 0 if k is None else col[k] - (j - i)
+    positions = {i: (float(col[i] - row[i]), float(row[i] + col[i])) for i in range(n)}
+
     chip = cls(
         id=chip_id,
         name=name,
@@ -251,6 +268,7 @@ def _build_chip(cls: type[PhysicalChip], chip_id: str, name: str, snapshot: str,
         symmetric_gates=set(SYMMETRIC_GATES),
         graph=graph,
         snapshot=snapshot,
+        positions=positions,
         calibration_set_id=dqa.get("calibration_set_id"),
         gate_loci=loci,
     )
@@ -266,8 +284,8 @@ def _build_chip(cls: type[PhysicalChip], chip_id: str, name: str, snapshot: str,
                 extra={k: v for k, v in o.items() if k not in ("dut_field", "value", "unit")},
             )
             dut = o["dut_field"]
-            tc = _TC.findall(dut)
-            qbs = [q for q in dict.fromkeys(_QB.findall(dut)) if q in index]
+            tc = _REGEX_TC.findall(dut)
+            qbs = [q for q in dict.fromkeys(_REGEX_QB.findall(dut)) if q in index]
             key = None
             if tc:
                 x, y = tc[0]
@@ -316,6 +334,11 @@ def _build_chip(cls: type[PhysicalChip], chip_id: str, name: str, snapshot: str,
             key = frozenset((index[m.group(1)], index[m.group(2)]))
             if key in couplers:
                 couplers[key].gate_fidelity["cz"] = value
+    log.debug(
+        "Built %s (snapshot %s): %d/%d qubits active, %d/%d couplers active",
+        chip_id, snapshot, len(chip.active_qubits), chip.num_qubits,
+        len(chip.active_couplers), chip.num_couplers,
+    )
     return chip
 
 
@@ -340,17 +363,23 @@ class IQMGarnet(PhysicalChip):
     def fetch(
         cls,
         calibration_set: str = "default",
-        token: str | None = None,
         root: str | Path = CACHE_ROOT,
         timeout: float = 30.0,
     ) -> IQMGarnet:
         """Fetch the calibration from Resonance, cache it under `root`, build the chip.
 
-        Raises RuntimeError on any HTTP or network failure (the metrics 404 only warns).
+        The server is `IQM_URL`, the token `IQM_CALIBRATION_TOKEN` (env or `.env`).
+
+        Raises RuntimeError on any HTTP or network failure (the metrics 404 only logs a warning).
         """
-        raw = _fetch_raw("garnet", calibration_set, token, timeout)
+        raw = _fetch_raw("garnet", calibration_set, timeout)
         directory = _save(raw, root)
-        return _build_chip(cls, "garnet", "IQM Garnet", directory.name, raw)
+        chip = _build_chip(cls, "garnet", "IQM Garnet", directory.name, raw)
+        log.info(
+            "Calibration fetched: %s, requested set %r, calibration set id %s, snapshot %s",
+            "garnet", calibration_set, chip.calibration_set_id, directory.name,
+        )
+        return chip
 
     @classmethod
     def load(cls, snapshot: str = "latest", root: str | Path = CACHE_ROOT) -> IQMGarnet:
@@ -359,6 +388,7 @@ class IQMGarnet(PhysicalChip):
         Raises FileNotFoundError if there is no such snapshot.
         """
         directory = _snapshot_dir("garnet", snapshot, root)
+        log.info("Loading %s from cache: snapshot %s (requested %r)", "garnet", directory.name, snapshot)
         return _build_chip(cls, "garnet", "IQM Garnet", directory.name, _read(directory))
 
 
@@ -380,17 +410,23 @@ class IQMEmerald(PhysicalChip):
     def fetch(
         cls,
         calibration_set: str = "default",
-        token: str | None = None,
         root: str | Path = CACHE_ROOT,
         timeout: float = 30.0,
     ) -> IQMEmerald:
         """Fetch the calibration from Resonance, cache it under `root`, build the chip.
 
-        Raises RuntimeError on any HTTP or network failure (the metrics 404 only warns).
+        The server is `IQM_URL`, the token `IQM_CALIBRATION_TOKEN` (env or `.env`).
+
+        Raises RuntimeError on any HTTP or network failure (the metrics 404 only logs a warning).
         """
-        raw = _fetch_raw("emerald", calibration_set, token, timeout)
+        raw = _fetch_raw("emerald", calibration_set, timeout)
         directory = _save(raw, root)
-        return _build_chip(cls, "emerald", "IQM Emerald", directory.name, raw)
+        chip = _build_chip(cls, "emerald", "IQM Emerald", directory.name, raw)
+        log.info(
+            "Calibration fetched: %s, requested set %r, calibration set id %s, snapshot %s",
+            "emerald", calibration_set, chip.calibration_set_id, directory.name,
+        )
+        return chip
 
     @classmethod
     def load(cls, snapshot: str = "latest", root: str | Path = CACHE_ROOT) -> IQMEmerald:
@@ -399,4 +435,5 @@ class IQMEmerald(PhysicalChip):
         Raises FileNotFoundError if there is no such snapshot.
         """
         directory = _snapshot_dir("emerald", snapshot, root)
+        log.info("Loading %s from cache: snapshot %s (requested %r)", "emerald", directory.name, snapshot)
         return _build_chip(cls, "emerald", "IQM Emerald", directory.name, _read(directory))

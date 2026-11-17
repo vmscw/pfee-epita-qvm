@@ -7,7 +7,7 @@
 
 Both expose the `target` of their graph, so `transpile(qc, backend)` works,
 then `backend.run(qc)` checks the circuit, queues it in the hypervisor and
-returns an `UltraqJob`.
+returns an `UltraqJob`. Backend creation and submissions are logged at DEBUG.
 
 This module must not know physical qubits, the scheduling policy, the
 execution target nor any vendor.
@@ -15,20 +15,19 @@ execution target nor any vendor.
 
 from __future__ import annotations
 
+import logging
 import warnings
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import rustworkx as rx
 from qiskit import QuantumCircuit
 from qiskit.providers import BackendV2, Options
 from qiskit.transpiler import Target
 
+from ultraq_backend.hypervisor import Hypervisor
 from ultraq_qiskit_connector.job import UltraqJob
 
-if TYPE_CHECKING:
-    from ultraq_backend.hypervisor import Hypervisor
-
-_IGNORED_OPTIONS = {"seed_simulator"}  # passed by BackendSamplerV2; meaningless here
+log = logging.getLogger(__name__)
 
 
 class _UltraqBackend(BackendV2):
@@ -47,6 +46,7 @@ class _UltraqBackend(BackendV2):
         self._request = request
         self._graph = hypervisor.virtual_topology.graph(**request)
         self._target = hypervisor.virtual_topology.target(**request)
+        log.debug("backend %s created", name)
 
     @property
     def target(self) -> Target:
@@ -77,13 +77,15 @@ class _UltraqBackend(BackendV2):
         first with `transpile(qc, backend)`.
         """
         circuit = _single_circuit(run_input)
-        unknown = set(options) - set(self.options) - _IGNORED_OPTIONS
+        unknown = set(options) - set(self.options)
         if unknown:
+            log.debug("%s: ignoring unknown run options %s", self.name, sorted(unknown))
             warnings.warn(f"{self.name}: ignoring unknown run options {sorted(unknown)}")
         shots = options.get("shots", self.options.shots)
         memory = bool(options.get("memory", self.options.memory))
 
         job_id = self._hypervisor.submit(circuit, shots=shots, **self._request)
+        log.debug("%s: run() submitted job %s, %s shots", self.name, job_id[:8], shots)
         header = {
             "name": circuit.name,
             "creg_sizes": [[creg.name, creg.size] for creg in circuit.cregs],

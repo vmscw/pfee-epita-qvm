@@ -4,6 +4,7 @@ The fetched calibration snapshot is the source of truth (see `ultraq_backend.mod
 `CHIPS` maps the chip names used in layout files to their class.
 """
 
+import logging
 from pathlib import Path
 
 from ultraq_backend.model.chips.iqm import CACHE_ROOT, IQMEmerald, IQMGarnet, snapshots
@@ -13,6 +14,8 @@ from ultraq_backend.model.chips.physical_chip import (
     Qubit,
     RawMetric,
 )
+
+log = logging.getLogger(__name__)
 
 CHIPS: dict[str, type[PhysicalChip]] = {"garnet": IQMGarnet, "emerald": IQMEmerald}
 """Chip name -> class (each has `fetch()` and `load(snapshot, root)`)."""
@@ -25,6 +28,7 @@ def load_chip(name: str, snapshot: str = "latest", root: str | Path = CACHE_ROOT
     """
     if name not in CHIPS:
         raise KeyError(f"unknown chip {name!r}, available: {sorted(CHIPS)}")
+    log.debug("load_chip %r, snapshot %r", name, snapshot)
     return CHIPS[name].load(snapshot, root)
 
 

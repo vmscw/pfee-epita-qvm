@@ -7,8 +7,12 @@ nor the execution target.
 
 from __future__ import annotations
 
+import logging
+
 import rustworkx as rx
 from qiskit import QuantumCircuit
+
+log = logging.getLogger(__name__)
 
 
 def check_circuit(circuit: QuantumCircuit, graph: rx.PyGraph, basis_gates: list[str]) -> None:
@@ -39,3 +43,4 @@ def check_circuit(circuit: QuantumCircuit, graph: rx.PyGraph, basis_gates: list[
             raise ValueError(f"gate {name!r} on non-edge {qubits}")
     if not measured:
         raise ValueError("circuit measures nothing")
+    log.debug("circuit %r accepted: %d qubits, %d operations", circuit.name, circuit.num_qubits, len(circuit.data))

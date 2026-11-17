@@ -9,12 +9,12 @@ execution target nor any vendor.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import logging
 
+from ultraq_backend.hypervisor import Hypervisor
 from ultraq_qiskit_connector.backend import CategoryBackend, FusedBackend
 
-if TYPE_CHECKING:
-    from ultraq_backend.hypervisor import Hypervisor
+log = logging.getLogger(__name__)
 
 
 class UltraqProvider:
@@ -22,6 +22,7 @@ class UltraqProvider:
 
     def __init__(self, hypervisor: Hypervisor) -> None:
         self.hypervisor = hypervisor
+        log.debug("provider created for %r", hypervisor)
 
     def backends(self, min_qubits: int | None = None) -> list[CategoryBackend]:
         """One backend per category with at least `min_qubits` qubits, smallest first."""

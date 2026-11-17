@@ -3,10 +3,10 @@
 ultraq runs **several quantum programs at the same time on one chip** by cutting it into **quantum virtual machines (qVMs)**. The design follows **HyperQ** (OSDI'25).
 
 - The chip is a real one, **IQM Garnet** (20 qubits) or **IQM Emerald** (54 qubits), built from a **calibration snapshot** fetched from IQM Resonance and cached locally.
-- A **layout** cuts the chip into VMs. By default the whole chip is one VM; a hand-written cut gives several VMs, possibly linked by *connectors* (see [docs/model.md](docs/model.md)).
+- A **layout** cuts the chip into VMs. By default the whole chip is one VM; a layout file gives several VMs, possibly linked by *connectors*. Two are shipped (see below).
 - A **hypervisor** (`ultraq_backend.Hypervisor`) queues circuits, places them on free VMs, combines them into one circuit, runs it and gives each job its own counts.
 - Users write **plain Qiskit** through `ultraq_qiskit_connector`: `transpile(qc, backend)`, `backend.run(qc)`, `job.result().get_counts()`.
-- Execution is **Aer only** for now, without noise model.
+- Execution runs on **Aer** (no noise model) or, as-is, on the **real IQM chip** through iqm-client (`Hypervisor(chip, executor=IQMExecutor(chip))`).
 
 ## Install and run
 
@@ -15,21 +15,9 @@ From the project root `ultraq/` (ignore uv's `VIRTUAL_ENV` warning):
 ```bash
 uv sync
 uv run python -m ultraq_backend.model.chips garnet    # fetch + cache a Garnet snapshot
-uv run python examples/demo.py                        # 2 users share one batch on Aer
 ```
 
-Fetching needs an IQM Resonance token in `IQM_TOKEN` (environment or `.env`). Snapshots go to `calibration_data/garnet/<UTC timestamp>/` (gitignored). See [docs/calibration.md](docs/calibration.md).
-
-`examples/demo.py` fetches the calibration itself, cuts two 2x2 VMs out of Garnet (vm1 = QB1 QB2 QB4 QB5, vm2 = QB6 QB7 QB11 QB12), and alice and bob each run a GHZ-4. Output (counts vary):
-
-```text
-IQM Garnet snapshot 20261108T115135Z
-alice: {'1111': 517, '0000': 483}
-bob: {'0000': 510, '1111': 490}
-history: [[('2254c7...', ['vm1']), ('b0a44b...', ['vm2'])]]
-```
-
-Both jobs ran in the same batch, one per VM.
+Fetching needs the IQM Resonance server in `IQM_URL` and a token in `IQM_CALIBRATION_TOKEN` (environment or `.env`); running on the real QPU needs `IQM_TOKEN`. Snapshots go to `calibration_data/garnet/<UTC timestamp>/` (gitignored).
 
 ## Minimal example
 
@@ -52,7 +40,24 @@ with Hypervisor(IQMGarnet.load()) as hv:          # latest cached snapshot
     print(job.result().get_counts())              # {'00': 503, '11': 497}
 ```
 
-The hypervisor runs its queue in a background thread; leaving the `with` block (or `hv.stop()`) stops it. To cut the chip into several VMs, pass a `ChipLayout` (see `examples/demo.py` and [docs/model.md](docs/model.md)).
+The hypervisor runs its queue in a background thread; leaving the `with` block (or `hv.stop()`) stops it. To cut the chip into several VMs, pass a `ChipLayout` (`ChipLayout.from_dict` or `ChipLayout.from_file`) or the path of a layout file.
+
+## Default layouts
+
+`ultraq_backend/model/chips/default_layout/` holds two layouts:
+
+- `default_iqm_garnet.json`: 4 VMs of category S4 (2×2 square) and 4 connectors;
+- `default_iqm_emerald.json`: 4 VMs of category S9 (3×3 square) and 5 connectors.
+
+```python
+from ultraq_backend.model.chip_layout import ChipLayout
+
+layout = ChipLayout.from_file("ultraq_backend/model/chips/default_layout/default_iqm_garnet.json")
+hv = Hypervisor(layout)          # or Hypervisor("<same path>"), relative to the current directory
+layout.plot("garnet.png")        # draw it (needs `uv sync --extra plot`)
+```
+
+A layout describes the chip as if everything were on. Loaded on a snapshot where a qubit or coupler it uses is off, it is pruned with a warning: the VM becomes smaller (in a category such as `S4~1`, backend `ultraq_S4~1`) and a connector without a usable link is removed.
 
 ## Tree
 
@@ -63,24 +68,14 @@ ultraq/
 │   ├── model/                 # data only: chips/, vm.py, virtual_topology.py, chip_layout.py, jobs.py
 │   └── steps/                 # validation -> scheduler -> mapping -> executor
 ├── ultraq_qiskit_connector/   # Qiskit interface: UltraqProvider, CategoryBackend, FusedBackend, UltraqJob
-├── examples/demo.py           # end-to-end demo
-├── calibration_data/          # snapshot cache (gitignored)
-└── docs/
+└── calibration_data/          # snapshot cache (gitignored)
 ```
-
-## Documentation
-
-- [docs/guide.md](docs/guide.md): using ultraq (layouts, fusion, errors, API).
-- [docs/model.md](docs/model.md): the model (categories, VMs, connectors, fusion, placement).
-- [docs/architecture.md](docs/architecture.md): code organisation and the path of a job.
-- [docs/calibration.md](docs/calibration.md): IQM calibration data, fetch and cache.
-- [docs/extending.md](docs/extending.md): ways to extend the project.
 
 ## Current limits
 
 - **Aer only**, ideal simulation: the calibration is not used for a noise model.
 - Only **HyperQ pass 1** (spatial placement) is implemented; the scheduler ignores the calibration.
-- Cuts into several VMs are **written by hand** and valid for one snapshot (an inactive qubit or coupler makes them fail).
+- Cuts into several VMs are **written by hand**; an inactive qubit or coupler only shrinks the VMs that use it (no automatic re-cut).
 
 ## License
 

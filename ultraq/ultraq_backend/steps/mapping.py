@@ -11,9 +11,13 @@ This module must not know the scheduling policy nor the execution target.
 
 from __future__ import annotations
 
+import logging
+
 from ultraq_backend.model.chip_layout import ChipLayout
 from ultraq_backend.model.jobs import Batch, Decision, PlacedJob
 from ultraq_backend.model.virtual_topology import fuse
+
+log = logging.getLogger(__name__)
 
 
 class Mapper:
@@ -36,6 +40,11 @@ class Mapper:
         """The batch of placed jobs for these decisions (same order)."""
         batch = Batch()
         for job, vms in decisions:
-            batch.jobs.append(PlacedJob(job.job_id, job.circuit, self.physical_qubits(vms), job.shots))
+            qubits = self.physical_qubits(vms)
+            batch.jobs.append(PlacedJob(job.job_id, job.circuit, qubits, job.shots))
             batch.vms.append(list(vms))
+            if log.isEnabledFor(logging.DEBUG):
+                chip = self.chip_layout.physical_chip
+                labels = [chip.graph[q].label for q in qubits]
+                log.debug("job %s on VMs %s -> physical qubits %s %s", job.job_id[:8], vms, qubits, labels)
         return batch
