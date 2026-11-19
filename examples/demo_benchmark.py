@@ -17,8 +17,11 @@ From the project root `ultraq/`:
     uv run python examples/demo_benchmark.py
 """
 
+from pathlib import Path
+
 from qiskit import QuantumCircuit, transpile
 
+import ultraq_backend
 from ultraq_backend import ChipLayout, Hypervisor
 from ultraq_backend.model.chips import IQMGarnet
 from ultraq_backend.steps.executor import IQMExecutor
@@ -41,8 +44,13 @@ def report(name: str, counts: dict[str, int]) -> None:
     print(f"{name}: GHZ {n} qubits, {ideal / sum(counts.values()):.1%} ideal outcomes")
 
 
+ULTRAQ_ROOT = Path(ultraq_backend.__file__).parent
+IQM_LAYOUT = (
+    ULTRAQ_ROOT / "model" / "chips" / "default_layout" / "default_iqm_garnet.json"
+)
+
 IQMGarnet.fetch()  # fresh calibration, cached: the layout below loads it ("latest")
-layout = ChipLayout.from_file("ultraq_backend/model/chips/default_layout/default_iqm_garnet.json")
+layout = ChipLayout.from_file(IQM_LAYOUT)
 
 executor = IQMExecutor(layout.physical_chip)  # one connection to the chip, shared by the hypervisors below
 

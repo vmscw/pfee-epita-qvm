@@ -65,7 +65,7 @@ from ultraq_backend.model.chips.physical_chip import (
 log = logging.getLogger(__name__)
 
 
-CACHE_ROOT = Path(__file__).resolve().parents[3] / "calibration_data"
+CACHE_ROOT = Path(__file__).resolve().parents[4] / "artefacts" / "calibration_data"
 """Default cache root: `calibration_data/` at the project root (independent of the cwd)."""
 
 GATES = {"prx": "r", "cz": "cz"}
