@@ -1,10 +1,12 @@
 from abc import ABC
 
+from qiskit import QuantumCircuit
+from qiskit.providers import BackendV2
 from qiskit_scaleway import ScalewayProvider
 from qiskit_scaleway.backends import BaseBackend, BaseJob
 
 from benchmark.config import invoke_config, invoke_auth_config
-from benchmark.utils import qasm2_to_qiskit
+from benchmark.utils import qasm2_to_qiskit, SkippedJob
 
 
 class ScalewayProvided(ABC):
@@ -15,26 +17,24 @@ class ScalewayProvided(ABC):
     """
 
     def __init__(self, backend: str):
-        config = invoke_config()
         auth_config = invoke_auth_config()
 
-        self._num_shots = config.num_shots
         self._provider = ScalewayProvider(
             project_id=auth_config.SCW_PROJECT_ID,
             secret_key=auth_config.SCW_SECRET_KEY,
         )
-        self._engine: BaseBackend = self._provider.get_backend(backend)
 
+        self.architecture: BackendV2 = self._provider.get_backend(backend)
         self.name = "scaleway_provided"
-        self.num_qubits = self._engine.num_qubits
+        self.num_qubits = self.architecture.num_qubits
 
-    def run(self, circuit: str) -> BaseJob | None:
-        qiskit_circuit = qasm2_to_qiskit(circuit)
-
-        if qiskit_circuit is None:
-            return None
-
-        return self._engine.run(qiskit_circuit, shots=self._num_shots)
+    def run(
+        self,
+        circuit: QuantumCircuit,
+        shots: int,
+        **kwargs,
+    ) -> BaseJob | SkippedJob:
+        return self.architecture.run(circuit, shots=shots, **kwargs)
 
 
 __all__ = ["ScalewayProvided"]

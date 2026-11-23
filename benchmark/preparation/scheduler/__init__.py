@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from typing import Protocol, Type
 
 from benchmark.preparation import Backend, Batch
-from benchmark.preparation.scheduler.hyperq import HyperQ
+from benchmark.preparation.scheduler.ultraq import UltraQ
 from benchmark.preparation.scheduler.sequential import Sequential
 
 
@@ -67,10 +67,10 @@ class Scheduler(Protocol):
 
 
 SCHEDULER_NAMES: dict[str, Type[Scheduler]] = {
-    "HyperQ": HyperQ,
+    "UltraQ": UltraQ,
     "Sequential": Sequential,
-    "hyperq": HyperQ,
-    "hyper_q": HyperQ,
+    "ultraq": UltraQ,
+    "ultra_q": UltraQ,
     "sequential": Sequential,
 }
 

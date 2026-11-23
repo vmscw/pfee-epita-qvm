@@ -1,13 +1,15 @@
+from qiskit.providers.backend import BackendV2
 import warnings
 
 import qiskit
 import qiskit.qasm2
+from qiskit import QuantumCircuit
 from qiskit.providers.fake_provider import GenericBackendV2
 from qiskit.transpiler import CouplingMap
 from qiskit_aer import AerJob, AerSimulator
 
 from benchmark.config import invoke_config
-from benchmark.utils import qasm2_to_qiskit
+from benchmark.utils import SkippedJob, qasm2_to_qiskit
 
 
 def _define_backend(noise: bool = False) -> GenericBackendV2:
@@ -44,33 +46,21 @@ class QiskitAer:
     def __init__(self):
         config = invoke_config()
 
-        self._max_size = config.debug_circuit_max_size
-        self._num_shots = config.num_shots
+        self.architecture: BackendV2 = _define_backend(config.debug_noise_on)
 
-        self._architecture = _define_backend(config.debug_noise_on)
-        self._engine = AerSimulator.from_backend(self._architecture)
+        self._max_size = config.debug_circuit_max_size
+        self._engine = AerSimulator.from_backend(self.architecture)
 
         self.name = "qiskit_aer"
         self.num_qubits = 25
 
-    def run(self, circuit: str) -> AerJob | None:
-        qiskit_circuit = qasm2_to_qiskit(circuit)
+    def run(self, circuit: QuantumCircuit, shots: int, **kwargs) -> AerJob | SkippedJob:
+        if circuit.num_qubits > self._max_size:
+            reason = f"Circuit contains more than {self._max_size} qubits."
+            warnings.warn(f"{reason}. Ignoring it.")
+            return SkippedJob(self, reason)
 
-        if qiskit_circuit is None:
-            return None
-
-        if qiskit_circuit.num_qubits > self._max_size:
-            warnings.warn(
-                f"Circuit contains more than {self._max_size} qubits. Ignoring it."
-            )
-            return None
-
-        transpiled_circuit = qiskit.transpile(
-            qiskit_circuit,
-            backend=self._architecture,
-        )
-
-        return self._engine.run(transpiled_circuit, shots=self._num_shots)
+        return self._engine.run(circuit, shots, **kwargs)
 
 
 __all__ = ["QiskitAer"]

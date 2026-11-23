@@ -22,6 +22,9 @@ class Config(BaseSettings):
     scheduler: str
     """Scheduler to measure for the benchmark."""
 
+    chip_layout_path: Path | None = None
+    """Should a chip layout be needed for the scheduler, path to the layout."""
+
     num_shots: int = 1024
     """Number of shots run for each circuit."""
     seed: int = 42

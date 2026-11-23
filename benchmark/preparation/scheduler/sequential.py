@@ -2,8 +2,10 @@ from collections import Counter
 from collections.abc import Sequence
 import warnings
 
+from qiskit import transpile
 from qiskit.providers import JobV1
 
+from benchmark.config import invoke_config
 from benchmark.preparation.backend import Backend
 from benchmark.preparation.batch import Batch
 from benchmark.utils import qasm2_to_qiskit
@@ -30,6 +32,7 @@ class SequentialJob:
     def duration(self) -> float:
         result = self._job.result()
 
+        print(type(result))
         duration_s = result.metadata.get("time_taken_execute", 0.0)
 
         if duration_s == 0.0:
@@ -51,22 +54,28 @@ class Sequential:
     """
 
     def __init__(self, backend: Backend):
+        config = invoke_config()
+
         self.name = "sequential"
         self.backend: Backend = backend
+        self._num_shots = config.num_shots
+        self._seed = config.seed
 
     def run(self, batch: Batch) -> list[SequentialJob]:
         jobs = []
 
         for name, circuit in batch:
-            if (job := self.backend.run(circuit)) is None:
+            circuit = qasm2_to_qiskit(circuit)
+
+            if circuit is None:
                 continue
 
-            # temporary hack
-            circuit = qasm2_to_qiskit(circuit)
-            assert circuit is not None
-            num_qubits = circuit.num_qubits
+            isa = transpile(
+                circuit, self.backend.architecture, seed_transpiler=self._seed
+            )
+            job = self.backend.run(isa, shots=self._num_shots)
 
-            jobs.append(SequentialJob(job, circuit=name, num_qubits=num_qubits))
+            jobs.append(SequentialJob(job, name, isa.num_qubits))
 
         return jobs
 

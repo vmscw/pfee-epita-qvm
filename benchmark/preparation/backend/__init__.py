@@ -1,27 +1,39 @@
 from collections import Counter
 from typing import Protocol, Type
 
-from qiskit.providers import JobV1
+from qiskit import QuantumCircuit
+from qiskit.providers import BackendV2 as QiskitBackend, JobV1
 
 
 class Backend(Protocol):
     """Interface of an arbitrary quantum processing backend."""
+
     name: str
     """Name of the backend."""
     num_qubits: int
     """The total number of qubits of the backend."""
+    architecture: QiskitBackend
+    """The underlying architecture of the computation backend.
+
+    This is required for schedulers that do not do their own circuit
+    transpilation.
+    """
 
     def __init__(self): ...
 
-    def run(self, circuit: str) -> JobV1 | None:
+    def run(self, circuit: QuantumCircuit, shots: int, **kwargs) -> JobV1:
         """Run the circuit and return a job id.
 
+        The circuit MUST be transpiled for the backend architecture beforehand.
+
         Args:
-            circuit (str): a circuit in OpenQASM format
+            circuit (str): a pre-transpiled circuit
+            shots (int): a number of shots
+            kwargs: extra arguments that will be passed upon the call to
+                    qiskit.providers.Backend.run
 
         Returns:
-            JobV1 | None: The job running the circuit if it is run. None
-                          otherwise.
+            JobV1 | None: The job running the circuit.
         """
 
 

@@ -1,10 +1,11 @@
+from qiskit import QuantumCircuit
 import warnings
 
 from qiskit_scaleway.backends.base_job import BaseJob
 
 from benchmark.config import invoke_config
 from benchmark.preparation.backend.scaleway_base import ScalewayProvided
-from benchmark.utils import qasm2_to_qiskit
+from benchmark.utils import qasm2_to_qiskit, SkippedJob
 
 
 # NOTE: we will keep this in case we want to debug interactions with Scaleway,
@@ -27,20 +28,18 @@ class QiskitAerScaleway(ScalewayProvided):
         self.num_qubits = 25
         self.name = "qiskit-aer-scaleway"
 
-    def run(self, circuit: str) -> BaseJob | None:
-        qiskit_circuit = qasm2_to_qiskit(circuit)
+    def run(
+        self,
+        circuit: QuantumCircuit,
+        shots: int,
+        **kwargs,
+    ) -> BaseJob | SkippedJob:
+        if circuit.num_qubits > self._max_size:
+            reason = f"Circuit contains more than {self._max_size} qubits."
+            warnings.warn(f"{reason}. Ignoring it.")
+            return SkippedJob(self, reason)
 
-        if qiskit_circuit is None:
-            return None
-
-        if qiskit_circuit.num_qubits > self._max_size:
-            warnings.warn(
-                f"Circuit contains more than {self._max_size} qubits. Ignoring it."
-            )
-            return None
-
-        return super().run(circuit)
-
+        return super().run(circuit, shots, **kwargs)
 
 
 __all__ = ["QiskitAerScaleway"]

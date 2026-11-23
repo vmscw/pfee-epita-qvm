@@ -2,11 +2,11 @@ from iqm.iqm_client import CircuitValidationError
 import warnings
 
 from iqm.qiskit_iqm import IQMFakeGarnet
-from qiskit import transpile
-from qiskit.providers.job import JobV1
+from qiskit import transpile, QuantumCircuit
+from qiskit.providers import BackendV2, JobV1
 
 from benchmark.config import invoke_config
-from benchmark.utils import qasm2_to_qiskit
+from benchmark.utils import qasm2_to_qiskit, SkippedJob
 
 
 class IQMGarnet20qEmulation:
@@ -20,34 +20,24 @@ class IQMGarnet20qEmulation:
         config = invoke_config()
 
         self._max_size = config.debug_circuit_max_size
-        self._num_shots = config.num_shots
-
         self._provider = None
-        self._engine = IQMFakeGarnet()
 
         self.name = "iqm-garnet-20q-mock"
         self.num_qubits = 20
+        self.architecture: BackendV2 = IQMFakeGarnet()
 
-    def run(self, circuit: str) -> JobV1 | None:
-        qiskit_circuit = qasm2_to_qiskit(circuit)
-
-        if qiskit_circuit is None:
-            return None
-
-        if qiskit_circuit.num_qubits > self._max_size:
-            warnings.warn(
-                f"Circuit contains more than {self._max_size} qubits. Ignoring it."
-            )
-            return None
+    def run(self, circuit: QuantumCircuit, shots: int, **kwargs) -> JobV1:
+        if circuit.num_qubits > self._max_size:
+            reason = f"Circuit contains more than {self._max_size} qubits."
+            warnings.warn(f"{reason}. Ignoring it.")
+            return SkippedJob(self, reason)
 
         try:
-            # FIXME: remove this. schedulers want to do their own transpilation
-            transpiled_circuit = transpile(qiskit_circuit, self._engine)
-            return self._engine.run(transpiled_circuit, shots=self._num_shots)
+            return self.architecture.run(circuit, shots=shots, **kwargs)
         except CircuitValidationError as e:
-            warnings.warn(
-                f"Failed to validate circuit for Garnet backend. Reason: {e}"
-            )
+            reason = f"Failed to validate circuit for Garnet backend. Reason: {e}"
+            warnings.warn(reason)
+            return SkippedJob(self, reason)
 
 
 __all__ = ["IQMGarnet20qEmulation"]
