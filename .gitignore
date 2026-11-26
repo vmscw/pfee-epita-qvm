@@ -1,3 +1,6 @@
+# uv
+.python-version
+
 # Build
 build/
 .env
@@ -12,3 +15,9 @@ ultraq/calibration_data/
 __pycache__/
 .pytest_cache/
 .ruff_cache/
+
+# Artefacts
+artefacts/
+
+# Scratch files
+*scratch*
